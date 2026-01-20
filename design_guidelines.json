@@ -1,0 +1,185 @@
+{
+  "design_system": {
+    "identity": {
+      "name": "Stadium Night UI",
+      "tone": "Competitive, Atmospheric, Electric, Premium",
+      "core_values": [
+        "Clarity under pressure",
+        "Excitement of the game",
+        "Community competition"
+      ]
+    },
+    "typography": {
+      "font_family": {
+        "headings": "Barlow Condensed, sans-serif",
+        "body": "Inter, sans-serif",
+        "numbers": "Teko, sans-serif"
+      },
+      "weights": {
+        "headings": "700",
+        "body_regular": "400",
+        "body_bold": "600",
+        "numbers": "500"
+      },
+      "sizes": {
+        "h1": "text-4xl md:text-6xl tracking-tight uppercase",
+        "h2": "text-2xl md:text-4xl tracking-tight uppercase",
+        "h3": "text-xl md:text-2xl font-bold",
+        "body": "text-base leading-relaxed",
+        "small": "text-sm text-muted-foreground",
+        "score": "text-3xl md:text-5xl font-mono"
+      }
+    },
+    "colors": {
+      "palette": {
+        "background": {
+          "default": "#0B0E14",
+          "paper": "#151922",
+          "glass": "rgba(21, 25, 34, 0.7)"
+        },
+        "primary": {
+          "main": "#00FF88",
+          "hover": "#00CC6A",
+          "text": "#000000"
+        },
+        "secondary": {
+          "main": "#3B82F6",
+          "hover": "#2563EB",
+          "text": "#FFFFFF"
+        },
+        "accent": {
+          "live": "#EF4444",
+          "special": "#D946EF"
+        },
+        "status": {
+          "success": "#22C55E",
+          "error": "#EF4444",
+          "warning": "#F59E0B",
+          "info": "#3B82F6"
+        },
+        "text": {
+          "primary": "#FFFFFF",
+          "secondary": "#94A3B8",
+          "muted": "#64748B"
+        },
+        "border": {
+          "default": "#1E293B",
+          "active": "#334155"
+        }
+      },
+      "gradients": {
+        "hero": "linear-gradient(to bottom, rgba(11, 14, 20, 0) 0%, #0B0E14 100%)",
+        "card_glow": "radial-gradient(circle at center, rgba(59, 130, 246, 0.15) 0%, rgba(0, 0, 0, 0) 70%)",
+        "live_pulse": "0 0 0 0 rgba(239, 68, 68, 0.7)"
+      }
+    },
+    "spacing": {
+      "container": "max-w-7xl mx-auto px-4 sm:px-6 lg:px-8",
+      "section": "py-12 md:py-20",
+      "card_padding": "p-6",
+      "grid_gap": "gap-6"
+    },
+    "radius": {
+      "default": "rounded-xl",
+      "card": "rounded-2xl",
+      "button": "rounded-full",
+      "input": "rounded-lg"
+    },
+    "shadows": {
+      "card": "0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.3)",
+      "glow": "0 0 15px rgba(0, 255, 136, 0.3)",
+      "text_glow": "0 0 10px rgba(255, 255, 255, 0.5)"
+    },
+    "motion": {
+      "transitions": {
+        "default": "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+        "hover": "transform 0.2s ease-out"
+      },
+      "animations": {
+        "fade_in": {
+          "initial": { "opacity": 0, "y": 20 },
+          "animate": { "opacity": 1, "y": 0 },
+          "transition": { "duration": 0.5 }
+        },
+        "pulse": {
+          "animate": { "scale": [1, 1.05, 1], "opacity": [1, 0.8, 1] },
+          "transition": { "duration": 2, "repeat": "Infinity" }
+        }
+      }
+    }
+  },
+  "components": {
+    "Button": {
+      "variants": {
+        "primary": "bg-[#00FF88] text-black hover:bg-[#00CC6A] font-bold uppercase tracking-wide shadow-[0_0_15px_rgba(0,255,136,0.3)]",
+        "secondary": "bg-[#1E293B] text-white hover:bg-[#334155] border border-[#334155]",
+        "ghost": "bg-transparent text-[#94A3B8] hover:text-white hover:bg-[#1E293B]/50",
+        "outline": "border-2 border-[#00FF88] text-[#00FF88] hover:bg-[#00FF88]/10"
+      },
+      "sizes": {
+        "sm": "h-8 px-4 text-xs",
+        "default": "h-10 px-6 py-2",
+        "lg": "h-12 px-8 text-lg"
+      }
+    },
+    "Card": {
+      "base": "bg-[#151922] border border-[#1E293B] rounded-2xl shadow-xl overflow-hidden relative",
+      "hover": "hover:border-[#334155] transition-colors duration-300",
+      "glass": "bg-[#151922]/80 backdrop-blur-md border border-white/10"
+    },
+    "Input": {
+      "base": "bg-[#0B0E14] border border-[#334155] text-white placeholder:text-[#64748B] focus:border-[#00FF88] focus:ring-1 focus:ring-[#00FF88] transition-all text-center font-mono text-lg"
+    },
+    "Badge": {
+      "live": "bg-[#EF4444] text-white animate-pulse px-2 py-0.5 text-xs font-bold uppercase tracking-wider rounded",
+      "finished": "bg-[#334155] text-[#94A3B8] px-2 py-0.5 text-xs font-bold uppercase tracking-wider rounded",
+      "upcoming": "bg-[#3B82F6]/20 text-[#3B82F6] px-2 py-0.5 text-xs font-bold uppercase tracking-wider rounded"
+    }
+  },
+  "layout_strategies": {
+    "dashboard": {
+      "grid": "grid grid-cols-1 lg:grid-cols-12 gap-6",
+      "sidebar": "hidden lg:block lg:col-span-2",
+      "main": "col-span-1 lg:col-span-7",
+      "widgets": "col-span-1 lg:col-span-3 space-y-6"
+    },
+    "fixtures": {
+      "container": "space-y-4",
+      "group_header": "sticky top-[70px] z-10 bg-[#0B0E14]/95 backdrop-blur py-2 border-b border-[#1E293B] mb-4"
+    }
+  },
+  "assets": {
+    "images": {
+      "hero_bg": "https://images.pexels.com/photos/31160144/pexels-photo-31160144.jpeg",
+      "hero_bg_alt": "https://images.pexels.com/photos/18420917/pexels-photo-18420917.jpeg",
+      "action_shot_1": "https://images.pexels.com/photos/13907445/pexels-photo-13907445.jpeg",
+      "action_shot_2": "https://images.pexels.com/photos/3361471/pexels-photo-3361471.jpeg",
+      "trophy": "https://images.pexels.com/photos/6532369/pexels-photo-6532369.jpeg"
+    },
+    "icons": "Lucide React (default)",
+    "placeholders": {
+      "team_logo": "https://via.placeholder.com/64/334155/FFFFFF?text=TEAM",
+      "user_avatar": "https://via.placeholder.com/150/334155/FFFFFF?text=USER"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Implement the 'Stadium Night' theme using the provided color palette. The background should be predominantly dark (#0B0E14).",
+    "Use 'Barlow Condensed' for all headings to give it a sports broadcast feel. If not available via standard import, use a similar condensed Google Font.",
+    "Ensure all 'Live' elements have a pulsing animation or glow effect.",
+    "The 'Prediction' input fields should be prominent, centered, and easy to tap on mobile.",
+    "Use the provided image URLs for the Hero section and empty states.",
+    "For the Tournament Bracket, use a horizontal scrolling container with flexbox or CSS grid to draw the tree structure.",
+    "Ensure the 'Competition Switcher' is always accessible, preferably in the top navigation.",
+    "Leaderboards should highlight the current user's row.",
+    "Use 'sonner' for all toast notifications (success/error).",
+    "All interactive elements must have `data-testid` attributes."
+  ],
+  "universal_guidelines": [
+    "Do not use generic centered layouts. Use asymmetry where possible.",
+    "Create depth with z-index and subtle shadows.",
+    "Micro-animations on hover are mandatory.",
+    "Use 2-3x more spacing than typical designs.",
+    "Never use 'Inter' for headings; use the specified display font.",
+    "Ensure AA contrast compliance for all text."
+  ]
+}
