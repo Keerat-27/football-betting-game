@@ -281,7 +281,7 @@ class KickPredictTester:
         self.test_get_profile()
         
         # 16. Get standings
-        self.test_standings()
+        self.test_get_standings()
         
         # Test login with existing user
         print("\n🔄 Testing login with existing credentials...")
