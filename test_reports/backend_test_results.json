@@ -1,0 +1,119 @@
+{
+  "summary": {
+    "total_tests": 18,
+    "passed_tests": 18,
+    "failed_tests": 0,
+    "success_rate": 100.0,
+    "timestamp": "2026-01-20T17:01:22.260627"
+  },
+  "detailed_results": [
+    {
+      "test": "Health Check",
+      "success": true,
+      "details": "Status: 200 (expected 200)",
+      "timestamp": "2026-01-20T17:01:21.120906"
+    },
+    {
+      "test": "User Registration",
+      "success": true,
+      "details": "Status: 200 (expected 200)",
+      "timestamp": "2026-01-20T17:01:21.392904"
+    },
+    {
+      "test": "Get Current User",
+      "success": true,
+      "details": "Status: 200 (expected 200)",
+      "timestamp": "2026-01-20T17:01:21.431459"
+    },
+    {
+      "test": "Get Competitions",
+      "success": true,
+      "details": "Status: 200 (expected 200)",
+      "timestamp": "2026-01-20T17:01:21.470681"
+    },
+    {
+      "test": "Sync Matches",
+      "success": true,
+      "details": "Status: 200 (expected 200)",
+      "timestamp": "2026-01-20T17:01:21.534577"
+    },
+    {
+      "test": "Get Matches",
+      "success": true,
+      "details": "Status: 200 (expected 200)",
+      "timestamp": "2026-01-20T17:01:21.573629"
+    },
+    {
+      "test": "Get Match 100000",
+      "success": true,
+      "details": "Status: 200 (expected 200)",
+      "timestamp": "2026-01-20T17:01:21.608778"
+    },
+    {
+      "test": "Create Prediction for Match 100000",
+      "success": true,
+      "details": "Status: 200 (expected 200)",
+      "timestamp": "2026-01-20T17:01:21.644439"
+    },
+    {
+      "test": "Create Prediction for Match 100006",
+      "success": true,
+      "details": "Status: 200 (expected 200)",
+      "timestamp": "2026-01-20T17:01:21.682904"
+    },
+    {
+      "test": "Get User Predictions",
+      "success": true,
+      "details": "Status: 200 (expected 200)",
+      "timestamp": "2026-01-20T17:01:21.722477"
+    },
+    {
+      "test": "Get Match 100000 Predictions",
+      "success": true,
+      "details": "Status: 200 (expected 200)",
+      "timestamp": "2026-01-20T17:01:21.757345"
+    },
+    {
+      "test": "Get Global Leaderboards",
+      "success": true,
+      "details": "Status: 200 (expected 200)",
+      "timestamp": "2026-01-20T17:01:21.796486"
+    },
+    {
+      "test": "Create Group",
+      "success": true,
+      "details": "Status: 200 (expected 200)",
+      "timestamp": "2026-01-20T17:01:21.835162"
+    },
+    {
+      "test": "Get Group df0dab41-4298-4992-83d9-79bd67936a14",
+      "success": true,
+      "details": "Status: 200 (expected 200)",
+      "timestamp": "2026-01-20T17:01:21.873658"
+    },
+    {
+      "test": "Get My Groups",
+      "success": true,
+      "details": "Status: 200 (expected 200)",
+      "timestamp": "2026-01-20T17:01:21.919802"
+    },
+    {
+      "test": "Get User Profile",
+      "success": true,
+      "details": "Status: 200 (expected 200)",
+      "timestamp": "2026-01-20T17:01:21.961076"
+    },
+    {
+      "test": "Get Standings",
+      "success": true,
+      "details": "Status: 200 (expected 200)",
+      "timestamp": "2026-01-20T17:01:21.999934"
+    },
+    {
+      "test": "User Login",
+      "success": true,
+      "details": "Status: 200 (expected 200)",
+      "timestamp": "2026-01-20T17:01:22.259604"
+    }
+  ]
+}
