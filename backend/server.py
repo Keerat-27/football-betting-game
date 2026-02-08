@@ -1,4 +1,11 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status, WebSocket, WebSocketDisconnect
+from fastapi import (
+    APIRouter,
+    Depends,
+    FastAPI,
+    HTTPException,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -6,15 +13,14 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict, EmailStr
-from typing import List, Optional, Dict, Any
+from pydantic import BaseModel, ConfigDict, EmailStr
+from typing import List, Optional, Dict
 import uuid
 from datetime import datetime, timezone, timedelta
 import jwt
 import bcrypt
 import httpx
-import asyncio
-import json
+
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -43,7 +49,10 @@ FOOTBALL_DATA_BASE_URL = "https://api.football-data.org/v4"
 security = HTTPBearer()
 
 # Logging
-logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
 logger = logging.getLogger(__name__)
 
 # ==================== MODELS ====================
@@ -121,9 +130,13 @@ def create_token(user_id: str) -> str:
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security)
+):
     try:
-        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        payload = jwt.decode(
+            credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM]
+        )
         user_id = payload.get("sub")
         if not user_id:
             raise HTTPException(status_code=401, detail="Invalid token")
@@ -140,9 +153,16 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
 
 @api_router.post("/auth/register", response_model=TokenResponse)
 async def register(user_data: UserCreate):
-    existing = await db.users.find_one({"$or": [{"email": user_data.email}, {"username": user_data.username}]})
+    existing = await db.users.find_one({
+        "$or": [
+            {"email": user_data.email},
+            {"username": user_data.username}
+        ]
+    })
     if existing:
-        raise HTTPException(status_code=400, detail="Email or username already exists")
+        raise HTTPException(
+            status_code=400, detail="Email or username already exists"
+        )
     
     user_id = str(uuid.uuid4())
     user = {
@@ -456,7 +476,10 @@ async def calculate_standings():
     
     result = []
     for group, teams in standings_data.items():
-        sorted_teams = sorted(teams.values(), key=lambda x: (-x["points"], -x["goal_diff"], -x["goals_for"]))
+        sorted_teams = sorted(
+            teams.values(),
+            key=lambda x: (-x["points"], -x["goal_diff"], -x["goals_for"])
+        )
         result.append({
             "group": group,
             "competition_id": 2000,
@@ -468,7 +491,10 @@ async def calculate_standings():
 # ==================== PREDICTIONS ====================
 
 @api_router.post("/predictions", response_model=PredictionResponse)
-async def create_prediction(prediction: PredictionCreate, current_user: dict = Depends(get_current_user)):
+async def create_prediction(
+    prediction: PredictionCreate,
+    current_user: dict = Depends(get_current_user)
+):
     # Check if match exists and is open for predictions
     match = await db.matches.find_one({"id": prediction.match_id}, {"_id": 0})
     if not match:
@@ -528,7 +554,10 @@ async def get_predictions(
     return predictions
 
 @api_router.get("/predictions/match/{match_id}")
-async def get_match_predictions(match_id: int, current_user: dict = Depends(get_current_user)):
+async def get_match_predictions(
+    match_id: int,
+    current_user: dict = Depends(get_current_user)
+):
     """Get all predictions for a match (only revealed after lock)"""
     match = await db.matches.find_one({"id": match_id}, {"_id": 0})
     if not match:
@@ -597,7 +626,10 @@ async def get_leaderboard(
     return result
 
 @api_router.get("/leaderboards/group/{group_id}")
-async def get_group_leaderboard(group_id: str, current_user: dict = Depends(get_current_user)):
+async def get_group_leaderboard(
+    group_id: str,
+    current_user: dict = Depends(get_current_user)
+):
     group = await db.groups.find_one({"id": group_id}, {"_id": 0})
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
@@ -639,7 +671,10 @@ async def get_group_leaderboard(group_id: str, current_user: dict = Depends(get_
 # ==================== GROUPS ====================
 
 @api_router.post("/groups", response_model=GroupResponse)
-async def create_group(group_data: GroupCreate, current_user: dict = Depends(get_current_user)):
+async def create_group(
+    group_data: GroupCreate,
+    current_user: dict = Depends(get_current_user)
+):
     group_id = str(uuid.uuid4())
     code = str(uuid.uuid4())[:8].upper()
     
@@ -665,7 +700,10 @@ async def create_group(group_data: GroupCreate, current_user: dict = Depends(get
     )
 
 @api_router.post("/groups/join", response_model=GroupResponse)
-async def join_group(join_data: GroupJoin, current_user: dict = Depends(get_current_user)):
+async def join_group(
+    join_data: GroupJoin,
+    current_user: dict = Depends(get_current_user)
+):
     group = await db.groups.find_one({"code": join_data.code.upper()})
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
@@ -705,7 +743,10 @@ async def get_my_groups(current_user: dict = Depends(get_current_user)):
     return groups
 
 @api_router.get("/groups/{group_id}")
-async def get_group(group_id: str, current_user: dict = Depends(get_current_user)):
+async def get_group(
+    group_id: str,
+    current_user: dict = Depends(get_current_user)
+):
     group = await db.groups.find_one({"id": group_id}, {"_id": 0})
     if not group:
         raise HTTPException(status_code=404, detail="Group not found")
