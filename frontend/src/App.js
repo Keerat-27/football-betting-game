@@ -9,6 +9,7 @@ import KnockoutBracket from "./pages/KnockoutBracket";
 import Leaderboards from "./pages/Leaderboards";
 import Profile from "./pages/Profile";
 import Groups from "./pages/Groups";
+import LeagueDetails from "./pages/LeagueDetails";
 import Auth from "./pages/Auth";
 import "./App.css";
 
@@ -48,6 +49,7 @@ function App() {
             <Route path="leaderboards" element={<Leaderboards />} />
             <Route path="profile" element={<Profile />} />
             <Route path="my-groups" element={<Groups />} />
+            <Route path="groups/:id" element={<LeagueDetails />} />
           </Route>
         </Routes>
       </BrowserRouter>

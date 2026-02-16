@@ -1,245 +1,132 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { Flag, TrendingUp, ChevronDown, ChevronUp } from "lucide-react";
-import { Button } from "../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
-import MatchCard from "../components/MatchCard";
+import { Shield } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const GroupStage = () => {
-  const [standings, setStandings] = useState([]);
-  const [matches, setMatches] = useState([]);
-  const [predictions, setPredictions] = useState({});
+  const [standings, setStandings] = useState({});
   const [loading, setLoading] = useState(true);
-  const [selectedGroup, setSelectedGroup] = useState("A");
-  const [expandedGroups, setExpandedGroups] = useState({});
-
-  const groups = ["A", "B", "C", "D", "E", "F", "G", "H"];
 
   useEffect(() => {
-    fetchData();
+    const fetchStandings = async () => {
+      try {
+        const res = await axios.get(`${API}/standings`);
+        setStandings(res.data);
+      } catch (error) {
+        console.error("Error fetching standings", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchStandings();
   }, []);
 
-  const fetchData = async () => {
-    try {
-      const [standingsRes, matchesRes, predictionsRes] = await Promise.all([
-        axios.get(`${API}/standings`),
-        axios.get(`${API}/matches?stage=GROUP_STAGE`),
-        axios.get(`${API}/predictions`),
-      ]);
-      
-      setStandings(standingsRes.data);
-      setMatches(matchesRes.data);
-      
-      const predMap = {};
-      predictionsRes.data.forEach((p) => {
-        predMap[p.match_id] = p;
-      });
-      setPredictions(predMap);
-    } catch (error) {
-      console.error("Failed to fetch data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getGroupStandings = (groupLetter) => {
-    const groupData = standings.find(s => s.group === groupLetter);
-    return groupData?.table || [];
-  };
-
-  const getGroupMatches = (groupLetter) => {
-    return matches.filter(m => m.group === `GROUP_${groupLetter}`);
-  };
-
-  const toggleGroupExpand = (group) => {
-    setExpandedGroups(prev => ({
-      ...prev,
-      [group]: !prev[group]
-    }));
-  };
-
-  const GroupTable = ({ groupLetter }) => {
-    const table = getGroupStandings(groupLetter);
-    const groupMatches = getGroupMatches(groupLetter);
-    const isExpanded = expandedGroups[groupLetter];
-
-    return (
-      <div className="stadium-card overflow-hidden">
-        {/* Group Header */}
-        <div className="bg-[#1E293B] px-4 py-3 flex items-center justify-between">
-          <h3 
-            className="text-lg font-bold text-white"
-            style={{ fontFamily: 'Barlow Condensed, sans-serif' }}
-          >
-            <Flag className="w-5 h-5 inline mr-2 text-[#00FF88]" />
-            GROUP {groupLetter}
-          </h3>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => toggleGroupExpand(groupLetter)}
-            className="text-[#94A3B8] hover:text-white"
-          >
-            {isExpanded ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
-          </Button>
-        </div>
-
-        {/* Standings Table */}
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="text-xs text-[#64748B] border-b border-[#1E293B]">
-                <th className="px-4 py-2 text-left">#</th>
-                <th className="px-4 py-2 text-left">Team</th>
-                <th className="px-2 py-2 text-center">P</th>
-                <th className="px-2 py-2 text-center">W</th>
-                <th className="px-2 py-2 text-center">D</th>
-                <th className="px-2 py-2 text-center">L</th>
-                <th className="px-2 py-2 text-center">GF</th>
-                <th className="px-2 py-2 text-center">GA</th>
-                <th className="px-2 py-2 text-center">GD</th>
-                <th className="px-2 py-2 text-center font-bold">Pts</th>
-              </tr>
-            </thead>
-            <tbody>
-              {table.length > 0 ? (
-                table.map((team, idx) => (
-                  <tr 
-                    key={team.team}
-                    className={`border-b border-[#1E293B] ${
-                      idx < 2 
-                        ? "bg-[#22C55E]/10" 
-                        : idx === 2 
-                          ? "bg-[#3B82F6]/10" 
-                          : ""
-                    }`}
-                    data-testid={`standing-row-${groupLetter}-${idx}`}
-                  >
-                    <td className="px-4 py-3 text-sm">
-                      <span className={`w-6 h-6 rounded flex items-center justify-center text-xs font-bold ${
-                        idx < 2 
-                          ? "bg-[#22C55E] text-black" 
-                          : idx === 2 
-                            ? "bg-[#3B82F6] text-white" 
-                            : "bg-[#1E293B] text-[#94A3B8]"
-                      }`}>
-                        {idx + 1}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm font-medium text-white">{team.team}</span>
-                    </td>
-                    <td className="px-2 py-3 text-center text-sm text-[#94A3B8]">{team.played}</td>
-                    <td className="px-2 py-3 text-center text-sm text-[#94A3B8]">{team.won}</td>
-                    <td className="px-2 py-3 text-center text-sm text-[#94A3B8]">{team.drawn}</td>
-                    <td className="px-2 py-3 text-center text-sm text-[#94A3B8]">{team.lost}</td>
-                    <td className="px-2 py-3 text-center text-sm text-[#94A3B8]">{team.goals_for}</td>
-                    <td className="px-2 py-3 text-center text-sm text-[#94A3B8]">{team.goals_against}</td>
-                    <td className="px-2 py-3 text-center text-sm text-white font-medium">
-                      {team.goal_diff > 0 ? `+${team.goal_diff}` : team.goal_diff}
-                    </td>
-                    <td className="px-2 py-3 text-center text-lg font-bold text-[#00FF88] font-score">{team.points}</td>
-                  </tr>
-                ))
-              ) : (
-                <tr>
-                  <td colSpan={10} className="px-4 py-8 text-center text-[#64748B]">
-                    No standings data yet
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        {/* Group Matches (Expandable) */}
-        {isExpanded && (
-          <div className="p-4 border-t border-[#1E293B] bg-[#0B0E14]/50">
-            <h4 className="text-sm font-bold text-[#94A3B8] mb-4 uppercase">Group Matches</h4>
-            <div className="space-y-3">
-              {groupMatches.map((match) => (
-                <MatchCard
-                  key={match.id}
-                  match={match}
-                  userPrediction={predictions[match.id]}
-                  onPredictionSaved={fetchData}
-                />
-              ))}
-              {groupMatches.length === 0 && (
-                <p className="text-center text-[#64748B] py-4">No matches in this group</p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Qualification Legend */}
-        <div className="px-4 py-3 border-t border-[#1E293B] flex items-center gap-4 text-xs">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-[#22C55E]" />
-            <span className="text-[#94A3B8]">Round of 16</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded bg-[#3B82F6]" />
-            <span className="text-[#94A3B8]">Possible qualification</span>
-          </div>
-        </div>
-      </div>
-    );
-  };
+  const groups = Object.keys(standings).sort();
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <h1 
-          className="text-3xl md:text-4xl font-bold text-white mb-2"
-          style={{ fontFamily: 'Barlow Condensed, sans-serif' }}
-          data-testid="group-stage-title"
-        >
-          <Flag className="w-8 h-8 inline mr-3 text-[#00FF88]" />
-          GROUP STAGE
-        </h1>
-        <p className="text-[#94A3B8]">
-          8 groups • Top 2 from each group qualify for the Round of 16
-        </p>
+    <div className="container-page min-h-screen">
+      <div className="page-header">
+        <div>
+          <h1 className="text-3xl md:text-4xl font-heading text-white mb-2">Group Stage</h1>
+          <p className="text-muted-foreground">Live standings and qualifications.</p>
+        </div>
       </div>
 
-      {/* Group Tabs */}
-      <Tabs value={selectedGroup} onValueChange={setSelectedGroup} className="mb-8">
-        <TabsList className="bg-[#151922] border border-[#1E293B] p-1 rounded-xl flex-wrap">
-          {groups.map((group) => (
-            <TabsTrigger
-              key={group}
-              value={group}
-              className="data-[state=active]:bg-[#00FF88] data-[state=active]:text-black rounded-lg min-w-[48px]"
-              data-testid={`group-tab-${group}`}
-            >
-              {group}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
-
-      {/* Content */}
       {loading ? (
-        <div className="grid md:grid-cols-2 gap-6">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="stadium-card h-64 animate-pulse" />
-          ))}
+        <div className="flex flex-col items-center justify-center h-64 gap-4">
+          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <div className="text-muted-foreground font-heading tracking-widest uppercase">Loading Tables...</div>
         </div>
       ) : (
-        <div className="grid md:grid-cols-2 gap-6">
+        <Tabs defaultValue={groups[0]} className="space-y-8">
+          <div className="overflow-x-auto pb-4 no-scrollbar -mx-4 px-4">
+            <TabsList className="h-auto p-1.5 bg-surface-raised border border-white/5 rounded-xl inline-flex gap-1 min-w-max">
+              {groups.map((group) => (
+                <TabsTrigger 
+                  key={group} 
+                  value={group}
+                  className="rounded-lg px-4 py-2 font-heading font-bold"
+                >
+                  {group.replace("GROUP_", "Group ")}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
+
           {groups.map((group) => (
-            <div 
-              key={group}
-              className={selectedGroup === group ? "md:col-span-2" : ""}
-            >
-              <GroupTable groupLetter={group} />
-            </div>
+            <TabsContent key={group} value={group} className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="stadium-card bg-surface-raised/50 border-white/5 overflow-hidden">
+                <div className="p-6 border-b border-white/5 bg-white/[0.02] flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-surface-raised flex items-center justify-center border border-white/5 text-lg font-bold font-heading text-primary shadow-[0_0_15px_rgba(0,255,128,0.2)]">
+                    {group.replace("GROUP_", "")}
+                  </div>
+                  <div>
+                    <h2 className="text-xl font-bold text-white font-heading">
+                      {group.replace("GROUP_", "Group ")}
+                    </h2>
+                    <div className="text-xs text-muted-foreground uppercase tracking-wider">World Cup 2026</div>
+                  </div>
+                </div>
+                
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm text-left">
+                    <thead className="text-xs text-muted-foreground uppercase bg-white/5 font-heading tracking-wider">
+                      <tr>
+                        <th className="px-6 py-4">Pos</th>
+                        <th className="px-6 py-4">Team</th>
+                        <th className="px-6 py-4 text-center">MP</th>
+                        <th className="px-6 py-4 text-center">W</th>
+                        <th className="px-6 py-4 text-center">D</th>
+                        <th className="px-6 py-4 text-center">L</th>
+                        <th className="px-6 py-4 text-center">GD</th>
+                        <th className="px-6 py-4 text-center">Pts</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-white/5">
+                      {standings[group].map((team, index) => (
+                        <tr 
+                          key={team.team_id} 
+                          className={`
+                            hover:bg-white/5 transition-colors
+                            ${index < 2 ? "bg-primary/[0.02]" : ""}
+                          `}
+                        >
+                          <td className="px-6 py-4">
+                            <div className={`
+                              w-6 h-6 rounded flex items-center justify-center text-xs font-bold
+                              ${index < 2 ? "bg-primary text-primary-foreground shadow-[0_0_10px_rgba(0,255,128,0.3)]" : "bg-surface-sunken text-muted-foreground"}
+                            `}>
+                              {index + 1}
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 font-bold text-white flex items-center gap-3">
+                            <div className="w-8 h-8 rounded bg-white/10 flex items-center justify-center p-1">
+                              <Shield className="w-4 h-4 text-white/50" />
+                            </div>
+                            {team.team}
+                            {index < 2 && <span className="text-[10px] text-primary ml-2 uppercase tracking-wide font-bold bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">Q</span>}
+                          </td>
+                          <td className="px-6 py-4 text-center font-mono text-muted-foreground">{team.played}</td>
+                          <td className="px-6 py-4 text-center font-mono text-muted-foreground">{team.won}</td>
+                          <td className="px-6 py-4 text-center font-mono text-muted-foreground">{team.drawn}</td>
+                          <td className="px-6 py-4 text-center font-mono text-muted-foreground">{team.lost}</td>
+                          <td className="px-6 py-4 text-center font-mono font-bold text-white">
+                            {team.goal_difference > 0 ? `+${team.goal_difference}` : team.goal_difference}
+                          </td>
+                          <td className="px-6 py-4 text-center font-heading text-lg font-bold text-accent">
+                            {team.points}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </TabsContent>
           ))}
-        </div>
+        </Tabs>
       )}
     </div>
   );

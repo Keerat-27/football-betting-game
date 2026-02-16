@@ -5,7 +5,8 @@ import { useAuth } from "../context/AuthContext";
 import { Button } from "../components/ui/button";
 import { 
   Trophy, Calendar, ArrowRight, Clock, 
-  TrendingUp, TrendingDown, Minus, Users
+  TrendingUp, TrendingDown, Minus, Users,
+  Activity, Star, Zap
 } from "lucide-react";
 import MatchCard from "../components/MatchCard";
 
@@ -14,296 +15,253 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 // Animated counter hook
 const useCountUp = (target, duration = 1200) => {
   const [count, setCount] = useState(0);
-  const [started, setStarted] = useState(false);
-  const ref = useRef(null);
-
   useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => { if (entry.isIntersecting) setStarted(true); },
-      { threshold: 0.3 }
-    );
-    if (ref.current) observer.observe(ref.current);
-    return () => observer.disconnect();
-  }, []);
+    let start = 0;
+    const end = parseInt(target) || 0;
+    if (start === end) return;
 
-  useEffect(() => {
-    if (!started || !target) return;
-    const num = parseInt(target) || 0;
-    const step = Math.ceil(num / (duration / 16));
-    let current = 0;
-    const timer = setInterval(() => {
-      current += step;
-      if (current >= num) { setCount(num); clearInterval(timer); }
-      else setCount(current);
-    }, 16);
+    let totalMilSec = duration;
+    let incrementTime = (totalMilSec / end) * 1000;
+
+    let timer = setInterval(() => {
+      start += 1;
+      setCount(start);
+      if (start === end) clearInterval(timer);
+    }, 10); // Simplified for React perf
+
     return () => clearInterval(timer);
-  }, [started, target, duration]);
-
-  return { count, ref };
+  }, [target, duration]);
+  return count;
 };
 
 const Home = () => {
   const { user } = useAuth();
+  const [stats, setStats] = useState(null);
   const [upcomingMatches, setUpcomingMatches] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
-  const [userStats, setUserStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [heroVisible, setHeroVisible] = useState(false);
-
-  // Counter animations for stats
-  const pointsCounter = useCountUp(userStats?.total_points);
-  const rankCounter = useCountUp(userStats?.global_rank, 800);
-  const predictionsCounter = useCountUp(userStats?.predictions_count);
-  const accuracyCounter = useCountUp(userStats?.accuracy, 600);
 
   useEffect(() => {
-    fetchData();
-    setTimeout(() => setHeroVisible(true), 100);
-  }, []);
+    const fetchData = async () => {
+      try {
+        const [statsRes, matchesRes, leaderboardRes] = await Promise.all([
+          axios.get(`${API}/users/${user.id}`),
+          axios.get(`${API}/matches`),
+          axios.get(`${API}/leaderboard`)
+        ]);
 
-  const fetchData = async () => {
-    try {
-      const [matchesRes, leaderboardRes, profileRes] = await Promise.all([
-        axios.get(`${API}/matches?status=SCHEDULED`),
-        axios.get(`${API}/leaderboards?limit=5`),
-        axios.get(`${API}/users/profile`),
-      ]);
-      
-      setUpcomingMatches(matchesRes.data.slice(0, 4));
-      setLeaderboard(leaderboardRes.data);
-      setUserStats(profileRes.data.stats);
-    } catch (error) {
-      console.error("Failed to fetch data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+        setStats(statsRes.data);
+        
+        // Filter for upcoming/live matches and sort by date
+        const now = new Date();
+        const upcoming = matchesRes.data
+          .filter(m => new Date(m.utc_date) > new Date(now.getTime() - 2 * 60 * 60 * 1000))
+          .sort((a, b) => new Date(a.utc_date) - new Date(b.utc_date))
+          .slice(0, 3);
+          
+        setUpcomingMatches(upcoming);
+        setLeaderboard(leaderboardRes.data.slice(0, 5));
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const getMovementIcon = (movement) => {
-    if (movement > 0) return <TrendingUp className="w-4 h-4 text-[#22C55E]" />;
-    if (movement < 0) return <TrendingDown className="w-4 h-4 text-[#EF4444]" />;
-    return <Minus className="w-4 h-4 text-[#64748B]" />;
-  };
+    if (user) fetchData();
+  }, [user]);
 
-  const heroWords = "PREDICT. COMPETE. WIN.".split(" ");
+  const userRank = leaderboard.findIndex(u => u.id === user?.id) + 1;
+  const countPoints = useCountUp(stats?.total_points || 0);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin" />
+          <div className="text-muted-foreground animate-pulse font-heading tracking-widest uppercase">Loading Arena...</div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen">
+    <div className="container-page space-y-12">
       {/* Hero Section */}
-      <section 
-        className="relative h-[60vh] min-h-[400px] flex items-center justify-center"
-        style={{
-          backgroundImage: `linear-gradient(to bottom, rgba(11, 14, 20, 0.7), rgba(11, 14, 20, 0.95)), url('https://images.pexels.com/photos/31160144/pexels-photo-31160144.jpeg')`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-        }}
-      >
-        <div className="text-center px-4 max-w-4xl mx-auto">
-          <div className="inline-flex items-center gap-2 bg-[#00FF88]/10 border border-[#00FF88]/30 rounded-full px-4 py-2 mb-6">
-            <Trophy className="w-4 h-4 text-[#00FF88]" />
-            <span className="text-sm text-[#00FF88] font-medium">FIFA World Cup 2026</span>
+      <section className="relative overflow-hidden rounded-3xl bg-surface-raised border border-white/5 shadow-2xl p-8 lg:p-12 mb-12">
+        {/* CSS Gradient Mesh Background */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-primary/20 blur-[100px] rounded-full translate-x-1/3 -translate-y-1/3 animate-pulse" style={{ animationDuration: '4s' }} />
+          <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-accent/10 blur-[100px] rounded-full -translate-x-1/3 translate-y-1/3" />
+          <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20 brightness-100 contrast-150 mix-blend-overlay" />
+        </div>
+
+        <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-8">
+          <div className="space-y-6 max-w-2xl">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/5 border border-white/10 backdrop-blur-sm text-xs font-bold uppercase tracking-widest text-primary animate-in fade-in slide-in-from-left-4 duration-700">
+              <Zap className="w-3.5 h-3.5 fill-primary" />
+              Live Tournament
+            </div>
+            
+            <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-white leading-[0.9] drop-shadow-sm">
+              PREDICT <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-primary/60">THE GLORY</span>
+            </h1>
+            
+            <p className="text-lg text-muted-foreground max-w-lg leading-relaxed font-sans">
+              Join thousands of football fans predicting match outcomes for the World Cup 2026. Compete for the crown in the ultimate prediction arena.
+            </p>
+
+            <div className="flex flex-wrap items-center gap-4 pt-2">
+              <Link to="/fixtures">
+                <Button size="lg" className="rounded-full shadow-[0_0_20px_rgba(0,255,128,0.3)]">
+                  Make Predictions <ArrowRight className="ml-2 w-5 h-5" />
+                </Button>
+              </Link>
+              <Link to="/leaderboards">
+                <Button variant="outline" size="lg" className="rounded-full border-white/20 bg-white/5 hover:bg-white/10 backdrop-blur-sm">
+                  View Leaderboard
+                </Button>
+              </Link>
+            </div>
           </div>
-          
-          <h1 
-            className="text-5xl md:text-7xl font-bold text-white mb-4"
-            style={{ fontFamily: 'Barlow Condensed, sans-serif' }}
-            data-testid="hero-title"
-          >
-            {heroWords.map((word, i) => (
-              <span
-                key={i}
-                className="hero-letter mr-3"
-                style={{ animationDelay: `${i * 0.15 + 0.2}s` }}
-              >
-                {word}
-              </span>
-            ))}
-          </h1>
-          
-          <p className="text-lg md:text-xl text-[#94A3B8] mb-8 max-w-2xl mx-auto">
-            Make your predictions for every World Cup match and compete with friends and the global community.
-          </p>
-          
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link to="/fixtures">
-              <Button 
-                className="btn-primary h-14 px-8 text-lg rounded-xl group"
-                data-testid="cta-make-predictions"
-              >
-                Make Predictions
-                <ArrowRight className="w-5 h-5 ml-2 cta-arrow" />
-              </Button>
-            </Link>
-            <Link to="/leaderboards">
-              <Button 
-                className="btn-secondary h-14 px-8 text-lg rounded-xl"
-                data-testid="cta-view-rankings"
-              >
-                View Rankings
-              </Button>
-            </Link>
+
+          {/* Hero Stats Card */}
+          <div className="w-full md:w-80 relative group">
+            <div className="absolute inset-0 bg-gradient-to-br from-primary via-primary/50 to-accent opacity-20 blur-2xl rounded-3xl transform group-hover:scale-105 transition-transform duration-500" />
+            <div className="relative bg-card/60 backdrop-blur-xl border border-white/10 rounded-2xl p-6 shadow-2xl flex flex-col gap-6">
+              <div className="flex items-center justify-between pb-4 border-b border-white/5">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-full bg-surface-raised border border-white/5 flex items-center justify-center text-sm font-bold">
+                    {user?.username?.substring(0, 2).toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="text-sm font-bold text-white uppercase tracking-wide">My Rank</div>
+                    <div className="text-xs text-muted-foreground">Global League</div>
+                  </div>
+                </div>
+                <div className="text-2xl font-bold text-white font-heading">#{userRank || "-"}</div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-1">
+                  <div className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Points</div>
+                  <div className="text-3xl font-bold text-primary font-heading text-glow">{countPoints}</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Accuracy</div>
+                  <div className="text-3xl font-bold text-white font-heading">
+                     {stats?.total_predictions > 0 
+                      ? Math.round((stats.correct_predictions / stats.total_predictions) * 100) 
+                      : 0}%
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Stats Bar */}
-      {userStats && (
-        <section className="bg-[#151922] border-y border-[#1E293B]">
-          <div className="max-w-7xl mx-auto px-4 py-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="text-center" ref={pointsCounter.ref}>
-                <div className="text-3xl font-bold text-[#00FF88] font-score score-depth counter-animate">{pointsCounter.count}</div>
-                <div className="text-sm text-[#94A3B8] mt-1">Total Points</div>
-              </div>
-              <div className="text-center" ref={rankCounter.ref}>
-                <div className="text-3xl font-bold text-white font-score counter-animate">#{rankCounter.count}</div>
-                <div className="text-sm text-[#94A3B8] mt-1">Global Rank</div>
-              </div>
-              <div className="text-center" ref={predictionsCounter.ref}>
-                <div className="text-3xl font-bold text-white font-score counter-animate">{predictionsCounter.count}</div>
-                <div className="text-sm text-[#94A3B8] mt-1">Predictions</div>
-              </div>
-              <div className="text-center" ref={accuracyCounter.ref}>
-                <div className="text-3xl font-bold text-white font-score counter-animate">{accuracyCounter.count}%</div>
-                <div className="text-sm text-[#94A3B8] mt-1">Accuracy</div>
-              </div>
+      {/* Stats Grid */}
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        {[
+          { label: "Total Points", value: stats?.total_points || 0, icon: Star, color: "text-accent" },
+          { label: "Predictions", value: stats?.total_predictions || 0, icon: Activity, color: "text-blue-400" },
+          { label: "Perfect Scores", value: stats?.exact_scores || 0, icon: Trophy, color: "text-primary" },
+          { label: "Leagues", value: 3, icon: Users, color: "text-purple-400" },
+        ].map((stat, i) => (
+          <div key={i} className="stat-card group">
+            <div className={`p-2 rounded-xl bg-surface-raised mb-2 group-hover:scale-110 transition-transform duration-300 ${stat.color.replace('text-', 'bg-')}/10`}>
+              <stat.icon className={`w-5 h-5 ${stat.color}`} />
             </div>
+            <div className="text-2xl font-bold font-heading text-white">{stat.value}</div>
+            <div className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">{stat.label}</div>
           </div>
-        </section>
-      )}
+        ))}
+      </section>
 
-      {/* Main Content */}
-      <section className="max-w-7xl mx-auto px-4 py-12">
-        <div className="grid lg:grid-cols-12 gap-8">
-          {/* Upcoming Matches */}
-          <div className="lg:col-span-8">
-            <div className="flex items-center justify-between mb-6">
-              <h2 
-                className="text-2xl font-bold text-white"
-                style={{ fontFamily: 'Barlow Condensed, sans-serif' }}
-              >
-                <Calendar className="w-6 h-6 inline mr-2 text-[#00FF88]" />
-                UPCOMING MATCHES
-              </h2>
-              <Link to="/fixtures" className="text-[#00FF88] hover:text-[#00CC6A] text-sm font-medium flex items-center gap-1">
-                View All <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-
-            {loading ? (
-              <div className="grid md:grid-cols-2 gap-4">
-                {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="stadium-card h-48 skeleton-shimmer" />
-                ))}
-              </div>
-            ) : upcomingMatches.length > 0 ? (
-              <div className="grid md:grid-cols-2 gap-4 stagger-children">
-                {upcomingMatches.map((match) => (
-                  <MatchCard key={match.id} match={match} />
-                ))}
-              </div>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Upcoming Matches */}
+        <div className="lg:col-span-2 space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-heading text-white flex items-center gap-2">
+              <Calendar className="w-5 h-5 text-primary" />
+              UPCOMING MATCHES
+            </h2>
+            <Link to="/fixtures">
+              <Button variant="ghost" size="sm" className="text-xs font-bold uppercase tracking-wider">
+                View All <ArrowRight className="w-3 h-3 ml-1" />
+              </Button>
+            </Link>
+          </div>
+          
+          <div className="space-y-4">
+            {upcomingMatches.length > 0 ? (
+              upcomingMatches.map(match => (
+                <MatchCard key={match.id} match={match} onPredictionSaved={() => {}} />
+              ))
             ) : (
-              <div className="stadium-card p-12 text-center">
-                <Calendar className="w-12 h-12 text-[#64748B] mx-auto mb-4" />
-                <p className="text-[#94A3B8]">No upcoming matches scheduled</p>
+              <div className="p-8 rounded-2xl border border-white/5 bg-surface-raised/50 text-center space-y-3">
+                <Calendar className="w-10 h-10 text-muted-foreground mx-auto opacity-50" />
+                <div className="text-muted-foreground">No upcoming matches scheduled soon.</div>
+                <Link to="/fixtures"><Button variant="secondary">Check Full Schedule</Button></Link>
               </div>
             )}
           </div>
+        </div>
 
-          {/* Leaderboard Widget */}
-          <div className="lg:col-span-4">
-            <div className="flex items-center justify-between mb-6">
-              <h2 
-                className="text-2xl font-bold text-white"
-                style={{ fontFamily: 'Barlow Condensed, sans-serif' }}
+        {/* Leaderboard Widget */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-2xl font-heading text-white flex items-center gap-2">
+              <Trophy className="w-5 h-5 text-accent" />
+              TOP PREDICTORS
+            </h2>
+          </div>
+          
+          <div className="bg-surface-raised/50 backdrop-blur-sm border border-white/5 rounded-2xl overflow-hidden">
+            {leaderboard.map((player, index) => (
+              <div 
+                key={player.id} 
+                className={`flex items-center justify-between p-4 border-b border-white/5 last:border-0 hover:bg-white/5 transition-colors ${
+                  player.id === user.id ? "bg-primary/5" : ""
+                }`}
               >
-                <Trophy className="w-6 h-6 inline mr-2 text-[#F59E0B]" />
-                TOP 5
-              </h2>
-              <Link to="/leaderboards" className="text-[#00FF88] hover:text-[#00CC6A] text-sm font-medium flex items-center gap-1">
-                Full Rankings <ArrowRight className="w-4 h-4" />
-              </Link>
-            </div>
-
-            <div className="stadium-card p-4">
-              {loading ? (
-                <div className="space-y-4">
-                  {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="h-14 skeleton-shimmer" />
-                  ))}
+                <div className="flex items-center gap-3">
+                  <div className={`
+                    w-8 h-8 rounded-lg flex items-center justify-center text-xs font-bold font-heading
+                    ${index === 0 ? "bg-accent text-accent-foreground shadow-[0_0_10px_rgba(255,190,11,0.4)]" : 
+                      index === 1 ? "bg-slate-300 text-slate-900" :
+                      index === 2 ? "bg-amber-700 text-amber-100" : "bg-surface-sunken text-muted-foreground"}
+                  `}>
+                    {index + 1}
+                  </div>
+                  <div className="font-bold text-sm text-white">
+                    {player.username}
+                    {player.id === user.id && <span className="ml-2 text-[10px] text-primary bg-primary/10 px-1.5 py-0.5 rounded border border-primary/20">YOU</span>}
+                  </div>
                 </div>
-              ) : leaderboard.length > 0 ? (
-                <div className="space-y-2 stagger-children">
-                  {leaderboard.map((entry, idx) => (
-                    <div
-                      key={entry.user_id}
-                      className={`flex items-center gap-3 p-3 rounded-xl transition-all ${
-                        entry.user_id === user?.id
-                          ? "bg-[#00FF88]/10 border border-[#00FF88]/30"
-                          : "hover:bg-[#1E293B]/50"
-                      }`}
-                      data-testid={`leaderboard-row-${idx + 1}`}
-                    >
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${
-                        idx === 0 ? "medal-gold" :
-                        idx === 1 ? "medal-silver" :
-                        idx === 2 ? "medal-bronze" :
-                        "bg-[#1E293B] text-[#94A3B8]"
-                      }`}>
-                        {entry.rank}
-                      </div>
-                      
-                      <div className="flex-1 min-w-0">
-                        <div className="text-sm font-medium text-white truncate">
-                          {entry.username}
-                        </div>
-                        <div className="text-xs text-[#64748B]">
-                          {entry.predictions_count} predictions
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        {getMovementIcon(entry.movement)}
-                        <div className="text-right">
-                          <div className="text-lg font-bold text-[#00FF88] font-score score-depth">
-                            {entry.total_points}
-                          </div>
-                          <div className="text-xs text-[#64748B]">pts</div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Users className="w-12 h-12 text-[#64748B] mx-auto mb-4" />
-                  <p className="text-[#94A3B8]">No rankings yet</p>
-                </div>
-              )}
-            </div>
-
-            {/* Quick Links */}
-            <div className="mt-6 grid grid-cols-2 gap-4">
-              <Link to="/groups-stage" className="stadium-card p-4 hover:border-[#3B82F6] transition-all duration-300 group">
-                <div className="text-[#3B82F6] mb-2">
-                  <Users className="w-6 h-6 icon-bounce" />
-                </div>
-                <div className="text-sm font-medium text-white group-hover:text-[#3B82F6] transition-colors">
-                  Group Stage
-                </div>
-              </Link>
-              <Link to="/knockout" className="stadium-card p-4 hover:border-[#D946EF] transition-all duration-300 group">
-                <div className="text-[#D946EF] mb-2">
-                  <Trophy className="w-6 h-6 icon-bounce" />
-                </div>
-                <div className="text-sm font-medium text-white group-hover:text-[#D946EF] transition-colors">
-                  Knockout Bracket
-                </div>
-              </Link>
-            </div>
+                <div className="font-heading font-bold text-accent">{player.total_points} <span className="text-[10px] text-muted-foreground font-sans">PTS</span></div>
+              </div>
+            ))}
+            
+            <Link to="/leaderboards" className="block p-3 text-center text-xs font-bold uppercase tracking-wider text-muted-foreground hover:text-white hover:bg-white/5 transition-colors">
+              View Full Standings
+            </Link>
+          </div>
+          
+          {/* My Groups Quick Link */}
+          <div className="p-6 rounded-2xl bg-gradient-to-br from-surface-raised to-surface-sunken border border-white/5 relative overflow-hidden group">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 blur-[50px] rounded-full translate-x-10 -translate-y-10 group-hover:bg-primary/20 transition-colors" />
+            <Users className="w-8 h-8 text-white mb-4" />
+            <h3 className="text-lg font-heading text-white mb-2">Private Leagues</h3>
+            <p className="text-sm text-muted-foreground mb-4">Compete with friends in private groups.</p>
+            <Link to="/my-groups">
+              <Button variant="secondary" className="w-full">Go to My Leagues</Button>
+            </Link>
           </div>
         </div>
-      </section>
+      </div>
     </div>
   );
 };

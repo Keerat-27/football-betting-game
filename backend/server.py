@@ -33,6 +33,14 @@ db = client[os.environ['DB_NAME']]
 # Create the main app
 app = FastAPI(title="KickPredict API", version="1.0.0")
 
+@app.get("/")
+def read_root():
+    return {"message": "KickPredict API is running. Go to /docs for API documentation."}
+
+@app.get("/health")
+def health_check_root():
+    return {"status": "ok"}
+
 # Create router with /api prefix
 api_router = APIRouter(prefix="/api")
 

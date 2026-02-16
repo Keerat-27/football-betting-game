@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import axios from "axios";
-import { Calendar, Filter, RefreshCw } from "lucide-react";
+import { Calendar, Filter, RefreshCw, Trophy } from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import MatchCard from "../components/MatchCard";
@@ -10,205 +10,118 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const Fixtures = () => {
   const [matches, setMatches] = useState([]);
-  const [predictions, setPredictions] = useState({});
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
-  const [activeTab, setActiveTab] = useState("all");
+  const [filter, setFilter] = useState("all"); 
 
-  useEffect(() => {
-    fetchData();
-  }, []);
-
-  const fetchData = async () => {
+  const fetchMatches = async () => {
+    setLoading(true);
     try {
-      const [matchesRes, predictionsRes] = await Promise.all([
-        axios.get(`${API}/matches`),
-        axios.get(`${API}/predictions`),
-      ]);
-      
-      setMatches(matchesRes.data);
-      
-      // Convert predictions to lookup map
-      const predMap = {};
-      predictionsRes.data.forEach((p) => {
-        predMap[p.match_id] = p;
-      });
-      setPredictions(predMap);
+      const res = await axios.get(`${API}/matches`);
+      const sorted = res.data.sort((a, b) => new Date(a.utc_date) - new Date(b.utc_date));
+      setMatches(sorted);
     } catch (error) {
-      console.error("Failed to fetch data:", error);
+      console.error("Error fetching matches:", error);
     } finally {
       setLoading(false);
     }
   };
 
-  const syncMatches = async () => {
-    setSyncing(true);
-    try {
-      await axios.post(`${API}/matches/sync`);
-      await fetchData();
-    } catch (error) {
-      console.error("Failed to sync:", error);
-    } finally {
-      setSyncing(false);
-    }
-  };
+  useEffect(() => {
+    fetchMatches();
+  }, []);
 
-  const filterMatches = (status) => {
-    if (status === "all") return matches;
-    if (status === "today") return matches.filter(m => isToday(parseISO(m.utc_date)));
-    if (status === "upcoming") return matches.filter(m => m.status === "SCHEDULED");
-    if (status === "live") return matches.filter(m => m.status === "IN_PLAY" || m.status === "PAUSED");
-    if (status === "finished") return matches.filter(m => m.status === "FINISHED");
-    return matches;
-  };
-
-  const groupMatchesByDate = (matchList) => {
-    const groups = {};
-    matchList.forEach((match) => {
-      const date = format(parseISO(match.utc_date), "yyyy-MM-dd");
-      if (!groups[date]) {
-        groups[date] = [];
-      }
-      groups[date].push(match);
+  const getFilteredMatches = () => {
+    return matches.filter(match => {
+      if (filter === "all") return true;
+      if (filter === "upcoming") return match.status === "SCHEDULED" || match.status === "TIMED";
+      if (filter === "finished") return match.status === "FINISHED";
+      if (filter === "live") return match.status === "IN_PLAY" || match.status === "PAUSED";
+      return true;
     });
+  };
+
+  const groupedMatches = getFilteredMatches().reduce((groups, match) => {
+    const dateKey = format(parseISO(match.utc_date), "yyyy-MM-dd");
+    if (!groups[dateKey]) groups[dateKey] = [];
+    groups[dateKey].push(match);
     return groups;
-  };
+  }, {});
 
-  const formatDateHeader = (dateStr) => {
-    const date = parseISO(dateStr);
-    if (isToday(date)) return "Today";
-    if (isTomorrow(date)) return "Tomorrow";
-    return format(date, "EEEE, MMMM d, yyyy");
-  };
-
-  const filteredMatches = filterMatches(activeTab);
-  const groupedMatches = groupMatchesByDate(filteredMatches);
+  const dates = Object.keys(groupedMatches);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+    <div className="container-page min-h-screen">
+      <div className="page-header">
         <div>
-          <h1 
-            className="text-3xl md:text-4xl font-bold text-white"
-            style={{ fontFamily: 'Barlow Condensed, sans-serif' }}
-            data-testid="fixtures-title"
-          >
-            <Calendar className="w-8 h-8 inline mr-3 text-[#00FF88]" />
-            FIXTURES & PREDICTIONS
-          </h1>
-          <p className="text-[#94A3B8] mt-2">
-            Make your predictions before each match kicks off
-          </p>
+          <h1 className="text-3xl md:text-4xl font-heading text-white mb-2">Fixtures</h1>
+          <p className="text-muted-foreground">Match schedule and predictions.</p>
         </div>
         
-        <Button
-          onClick={syncMatches}
-          disabled={syncing}
-          className="btn-secondary gap-2"
-          data-testid="sync-matches-btn"
-        >
-          <RefreshCw className={`w-4 h-4 ${syncing ? "animate-spin" : ""}`} />
-          {syncing ? "Syncing..." : "Sync Matches"}
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={fetchMatches}
+            className="h-9 border-white/10 bg-surface-raised hover:bg-surface-raised/80"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? "animate-spin" : ""}`} />
+            Sync
+          </Button>
+          <div className="h-9 px-3 rounded-lg bg-surface-raised border border-white/10 flex items-center justify-center text-sm font-bold text-muted-foreground font-mono">
+            {getFilteredMatches().length} Matches
+          </div>
+        </div>
       </div>
 
-      {/* Filters */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-8">
-        <TabsList className="bg-[#151922] border border-[#1E293B] p-1 rounded-xl">
-          <TabsTrigger 
-            value="all" 
-            className="data-[state=active]:bg-[#00FF88] data-[state=active]:text-black rounded-lg"
-            data-testid="filter-all"
-          >
-            All
-          </TabsTrigger>
-          <TabsTrigger 
-            value="today"
-            className="data-[state=active]:bg-[#00FF88] data-[state=active]:text-black rounded-lg"
-            data-testid="filter-today"
-          >
-            Today
-          </TabsTrigger>
-          <TabsTrigger 
-            value="upcoming"
-            className="data-[state=active]:bg-[#00FF88] data-[state=active]:text-black rounded-lg"
-            data-testid="filter-upcoming"
-          >
-            Upcoming
-          </TabsTrigger>
-          <TabsTrigger 
-            value="live"
-            className="data-[state=active]:bg-[#EF4444] data-[state=active]:text-white rounded-lg"
-            data-testid="filter-live"
-          >
-            Live
-          </TabsTrigger>
-          <TabsTrigger 
-            value="finished"
-            className="data-[state=active]:bg-[#00FF88] data-[state=active]:text-black rounded-lg"
-            data-testid="filter-finished"
-          >
-            Finished
-          </TabsTrigger>
+      <Tabs defaultValue="all" className="space-y-8" onValueChange={setFilter}>
+        <TabsList className="w-full max-w-lg h-12 bg-surface-raised border border-white/5 p-1.5 rounded-xl mx-auto md:mx-0">
+          <TabsTrigger value="all" className="flex-1 rounded-lg">All</TabsTrigger>
+          <TabsTrigger value="upcoming" className="flex-1 rounded-lg">Upcoming</TabsTrigger>
+          <TabsTrigger value="live" className="flex-1 rounded-lg">Live</TabsTrigger>
+          <TabsTrigger value="finished" className="flex-1 rounded-lg">Results</TabsTrigger>
         </TabsList>
-      </Tabs>
 
-      {/* Matches List */}
-      {loading ? (
-        <div className="space-y-8">
-          {[1, 2, 3].map((i) => (
-            <div key={i}>
-              <div className="h-6 w-48 bg-[#1E293B] rounded mb-4 animate-pulse" />
-              <div className="grid md:grid-cols-2 gap-4">
-                {[1, 2].map((j) => (
-                  <div key={j} className="stadium-card h-48 animate-pulse" />
-                ))}
+        <TabsContent value={filter} className="space-y-8 mt-6">
+          {dates.length > 0 ? (
+            dates.map(date => {
+              const dateObj = parseISO(date);
+              let dateLabel = format(dateObj, "EEEE, MMMM do");
+              if (isToday(dateObj)) dateLabel = "Today";
+              if (isTomorrow(dateObj)) dateLabel = "Tomorrow";
+
+              return (
+                <section key={date} className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <div className="sticky top-20 lg:top-24 z-30 bg-background/90 backdrop-blur-md py-3 border-b border-white/5 flex items-center gap-3">
+                    <Calendar className="w-5 h-5 text-primary" />
+                    <h3 className="text-lg font-bold text-white font-heading tracking-wide uppercase">{dateLabel}</h3>
+                  </div>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3 gap-4">
+                    {groupedMatches[date].map(match => (
+                      <MatchCard 
+                        key={match.id} 
+                        match={match} 
+                        showPredictionInput={match.status !== "FINISHED" && match.status !== "IN_PLAY"}
+                      />
+                    ))}
+                  </div>
+                </section>
+              );
+            })
+          ) : (
+            <div className="flex flex-col items-center justify-center py-20 text-center gap-4 border border-dashed border-white/10 rounded-2xl bg-surface-raised/20">
+              <div className="w-16 h-16 rounded-full bg-surface-raised flex items-center justify-center">
+                <Filter className="w-8 h-8 text-muted-foreground opacity-50" />
               </div>
+              <div>
+                <h3 className="text-xl font-bold text-white mb-1">No matches found</h3>
+                <p className="text-muted-foreground">There are no matches for this filter.</p>
+              </div>
+              <Button variant="secondary" onClick={() => setFilter("all")}>Clear Filters</Button>
             </div>
-          ))}
-        </div>
-      ) : Object.keys(groupedMatches).length > 0 ? (
-        <div className="space-y-8">
-          {Object.entries(groupedMatches)
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([date, matchList]) => (
-              <div key={date}>
-                <div className="sticky top-[70px] lg:top-[80px] z-10 bg-[#0B0E14]/95 backdrop-blur py-3 border-b border-[#1E293B] mb-4">
-                  <h3 
-                    className="text-lg font-bold text-white"
-                    style={{ fontFamily: 'Barlow Condensed, sans-serif' }}
-                  >
-                    {formatDateHeader(date)}
-                  </h3>
-                </div>
-                <div className="grid md:grid-cols-2 gap-4">
-                  {matchList.map((match) => (
-                    <MatchCard
-                      key={match.id}
-                      match={match}
-                      userPrediction={predictions[match.id]}
-                      onPredictionSaved={fetchData}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
-        </div>
-      ) : (
-        <div className="stadium-card p-12 text-center">
-          <Calendar className="w-16 h-16 text-[#64748B] mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-white mb-2" style={{ fontFamily: 'Barlow Condensed, sans-serif' }}>
-            NO MATCHES FOUND
-          </h3>
-          <p className="text-[#94A3B8]">
-            {activeTab === "all" 
-              ? "Click 'Sync Matches' to load World Cup fixtures"
-              : `No ${activeTab} matches at the moment`
-            }
-          </p>
-        </div>
-      )}
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

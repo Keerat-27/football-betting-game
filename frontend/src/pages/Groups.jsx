@@ -1,412 +1,242 @@
 import { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
 import axios from "axios";
-import { toast } from "sonner";
-import { useAuth } from "../context/AuthContext";
+import { 
+  Users, Plus, ArrowRight, Copy, Check, 
+  Trophy, Shield, Globe, Loader2
+} from "lucide-react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
-import { Label } from "../components/ui/label";
-import { 
-  Dialog, DialogContent, DialogHeader, 
-  DialogTitle, DialogDescription, DialogFooter 
-} from "../components/ui/dialog";
-import { 
-  Users, Plus, Copy, Check, UserPlus, 
-  Crown, LogOut, Loader2
-} from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "../components/ui/dialog";
+import { toast } from "sonner";
+import { useAuth } from "../context/AuthContext";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const Groups = () => {
   const { user } = useAuth();
-  const [groups, setGroups] = useState([]);
+  const [myGroups, setMyGroups] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showJoinModal, setShowJoinModal] = useState(false);
-  const [selectedGroup, setSelectedGroup] = useState(null);
-  
-  // Form states
-  const [createName, setCreateName] = useState("");
-  const [createDescription, setCreateDescription] = useState("");
   const [joinCode, setJoinCode] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-  const [copied, setCopied] = useState(false);
-
-  useEffect(() => {
-    fetchGroups();
-  }, []);
+  const [createName, setCreateName] = useState("");
+  const [creationLoading, setCreationLoading] = useState(false);
+  const [joinLoading, setJoinLoading] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [joinDialogOpen, setJoinDialogOpen] = useState(false);
 
   const fetchGroups = async () => {
     try {
       const res = await axios.get(`${API}/groups`);
-      setGroups(res.data);
+      setMyGroups(res.data);
     } catch (error) {
-      console.error("Failed to fetch groups:", error);
+      console.error("Error fetching groups:", error);
+      toast.error("Failed to load your leagues.");
     } finally {
       setLoading(false);
     }
   };
 
-  const createGroup = async () => {
-    if (!createName.trim()) {
-      toast.error("Please enter a group name");
-      return;
-    }
+  useEffect(() => {
+    fetchGroups();
+  }, []);
 
-    setSubmitting(true);
+  const handleCreate = async () => {
+    if (!createName.trim()) return;
+    setCreationLoading(true);
     try {
-      const res = await axios.post(`${API}/groups`, {
-        name: createName,
-        description: createDescription,
-      });
-      toast.success("Group created successfully!");
-      setGroups([...groups, res.data]);
-      setShowCreateModal(false);
+      await axios.post(`${API}/groups`, { name: createName });
+      toast.success(`League "${createName}" created!`);
       setCreateName("");
-      setCreateDescription("");
+      setCreateDialogOpen(false);
+      fetchGroups(); // Refresh list
     } catch (error) {
-      const message = error.response?.data?.detail || "Failed to create group";
-      toast.error(message);
+      toast.error(error.response?.data?.detail || "Failed to create league.");
     } finally {
-      setSubmitting(false);
+      setCreationLoading(false);
     }
   };
 
-  const joinGroup = async () => {
-    if (!joinCode.trim()) {
-      toast.error("Please enter a group code");
-      return;
-    }
-
-    setSubmitting(true);
+  const handleJoin = async () => {
+    if (!joinCode.trim()) return;
+    setJoinLoading(true);
     try {
-      const res = await axios.post(`${API}/groups/join`, { code: joinCode });
-      toast.success(`Joined ${res.data.name}!`);
-      await fetchGroups();
-      setShowJoinModal(false);
+      await axios.post(`${API}/groups/join`, { code: joinCode });
+      toast.success("Joined league successfully!");
       setJoinCode("");
+      setJoinDialogOpen(false);
+      fetchGroups(); // Refresh list
     } catch (error) {
-      const message = error.response?.data?.detail || "Failed to join group";
-      toast.error(message);
+      toast.error(error.response?.data?.detail || "Failed to join league. Check the code.");
     } finally {
-      setSubmitting(false);
+      setJoinLoading(false);
     }
   };
 
-  const fetchGroupDetails = async (groupId) => {
-    try {
-      const res = await axios.get(`${API}/groups/${groupId}`);
-      setSelectedGroup(res.data);
-    } catch (error) {
-      toast.error("Failed to load group details");
-    }
-  };
-
-  const copyCode = (code) => {
-    navigator.clipboard.writeText(code);
-    setCopied(true);
-    toast.success("Code copied to clipboard!");
-    setTimeout(() => setCopied(false), 2000);
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    toast.success("Code copied to clipboard");
   };
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+    <div className="container-page min-h-screen">
+      <div className="page-header">
         <div>
-          <h1 
-            className="text-3xl md:text-4xl font-bold text-white mb-2"
-            style={{ fontFamily: 'Barlow Condensed, sans-serif' }}
-            data-testid="groups-title"
-          >
-            <Users className="w-8 h-8 inline mr-3 text-[#3B82F6]" />
-            MY LEAGUES
-          </h1>
-          <p className="text-[#94A3B8]">
-            Create private leagues to compete with friends
-          </p>
+          <h1 className="text-3xl md:text-4xl font-heading text-white mb-2">My Leagues</h1>
+          <p className="text-muted-foreground">Manage your private groups and competitions.</p>
         </div>
-
+        
         <div className="flex gap-3">
-          <Button
-            onClick={() => setShowJoinModal(true)}
-            className="btn-secondary gap-2"
-            data-testid="join-group-btn"
-          >
-            <UserPlus className="w-4 h-4" />
-            Join League
-          </Button>
-          <Button
-            onClick={() => setShowCreateModal(true)}
-            className="btn-primary gap-2"
-            data-testid="create-group-btn"
-          >
-            <Plus className="w-4 h-4" />
-            Create League
-          </Button>
+          <Dialog open={joinDialogOpen} onOpenChange={setJoinDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" className="border-white/10 bg-surface-raised hover:bg-surface-raised/80">
+                Join League
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md bg-surface-raised border-white/10">
+              <DialogHeader>
+                <DialogTitle>Join a League</DialogTitle>
+                <DialogDescription>Enter the invite code shared by the group admin.</DialogDescription>
+              </DialogHeader>
+              <Input
+                placeholder="Enter Invite Code (e.g. AB123)"
+                value={joinCode}
+                onChange={(e) => setJoinCode(e.target.value)}
+                className="text-center font-mono tracking-widest text-lg uppercase h-14"
+              />
+              <DialogFooter>
+                <Button onClick={handleJoin} disabled={!joinCode || joinLoading} className="w-full">
+                  {joinLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Join League"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="w-4 h-4 mr-2" /> Create League
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md bg-surface-raised border-white/10">
+              <DialogHeader>
+                <DialogTitle>Create New League</DialogTitle>
+                <DialogDescription>Start a new competition with friends.</DialogDescription>
+              </DialogHeader>
+              <div className="space-y-4 py-4">
+                <div className="space-y-2">
+                  <label className="text-xs font-bold uppercase text-muted-foreground">League Name</label>
+                  <Input
+                    placeholder="e.g. Sunday Football Club"
+                    value={createName}
+                    onChange={(e) => setCreateName(e.target.value)}
+                  />
+                </div>
+              </div>
+              <DialogFooter>
+                <Button onClick={handleCreate} disabled={!createName || creationLoading} className="w-full">
+                  {creationLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create League"}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
         </div>
       </div>
 
-      {/* Groups List */}
-      {loading ? (
-        <div className="space-y-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="stadium-card h-24 animate-pulse" />
-          ))}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {/* Global Public League Card */}
+        <div className="stadium-card p-6 border-l-4 border-l-primary group cursor-pointer hover:bg-surface-raised/80 transition-colors">
+          <div className="flex justify-between items-start mb-4">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center text-primary group-hover:scale-110 transition-transform">
+              <Globe className="w-6 h-6" />
+            </div>
+            <div className="bg-primary/10 text-primary text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wider">
+              Official
+            </div>
+          </div>
+          <h3 className="text-xl font-bold text-white font-heading mb-1">Global Leaderboard</h3>
+          <p className="text-sm text-muted-foreground mb-4">The main competition ranking all users.</p>
+          <div className="flex items-center gap-4 text-sm font-medium text-white/80">
+            <div className="flex items-center gap-1.5">
+              <Users className="w-4 h-4 text-muted-foreground" /> --
+            </div>
+            <div className="flex items-center gap-1.5">
+              <Trophy className="w-4 h-4 text-accent" /> Rank --
+            </div>
+          </div>
         </div>
-      ) : groups.length > 0 ? (
-        <div className="space-y-4">
-          {groups.map((group) => (
-            <div 
-              key={group.id}
-              className="stadium-card p-5 cursor-pointer hover:border-[#3B82F6] transition-colors"
-              onClick={() => fetchGroupDetails(group.id)}
-              data-testid={`group-card-${group.id}`}
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-[#3B82F6]/20 flex items-center justify-center">
-                    <Users className="w-6 h-6 text-[#3B82F6]" />
+
+        {/* Private User Leagues */}
+        {loading ? (
+           [1, 2].map(i => (
+             <div key={i} className="stadium-card p-6 animate-pulse">
+               <div className="w-12 h-12 bg-surface-raised rounded-xl mb-4" />
+               <div className="h-6 w-32 bg-surface-raised rounded mb-2" />
+               <div className="h-4 w-24 bg-surface-raised rounded" />
+             </div>
+           ))
+        ) : (
+          myGroups.map(group => (
+            <div key={group.id} className="relative group">
+              <Link to={`/groups/${group.id}`} className="block">
+                <div className="stadium-card p-6 border-l-4 border-l-accent hover:bg-surface-raised/80 transition-colors h-full">
+                   <div className="flex justify-between items-start mb-4">
+                    <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent group-hover:scale-110 transition-transform">
+                      <Shield className="w-6 h-6" />
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-bold text-white flex items-center gap-2">
-                      {group.name}
-                      {group.owner_id === user?.id && (
-                        <Crown className="w-4 h-4 text-[#F59E0B]" />
-                      )}
-                    </h3>
-                    <p className="text-sm text-[#94A3B8]">
-                      {group.member_count} member{group.member_count !== 1 ? "s" : ""}
-                    </p>
+                  <h3 className="text-xl font-bold text-white font-heading mb-1">{group.name}</h3>
+                  <p className="text-sm text-muted-foreground mb-4">
+                    {group.owner_id === user?.id ? `Code: ${group.code}` : "Member"}
+                  </p>
+                  
+                  <div className="flex items-center justify-between mt-auto">
+                    <div className="flex items-center gap-4 text-sm font-medium text-white/80">
+                      <div className="flex items-center gap-1.5">
+                        <Users className="w-4 h-4 text-muted-foreground" /> {group.member_count}
+                      </div>
+                    </div>
+                    <ArrowRight className="w-5 h-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all" />
                   </div>
                 </div>
-
-                <div className="flex items-center gap-3">
-                  <Button
-                    variant="ghost"
-                    size="sm"
+              </Link>
+              
+              {/* Copy Button (absolute positioned to stay clickable separately) */}
+              {group.owner_id === user?.id && (
+                <div className="absolute top-6 right-6 z-10">
+                   <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="h-8 w-8 text-muted-foreground hover:text-white"
                     onClick={(e) => {
-                      e.stopPropagation();
-                      copyCode(group.code);
+                      e.preventDefault();
+                      copyToClipboard(group.code);
                     }}
-                    className="text-[#94A3B8] hover:text-white"
+                    title="Copy Invite Code"
                   >
-                    {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-                    <span className="ml-2 font-mono text-xs">{group.code}</span>
+                    <Copy className="w-4 h-4" />
                   </Button>
                 </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : (
-        <div className="stadium-card p-12 text-center">
-          <Users className="w-16 h-16 text-[#64748B] mx-auto mb-4" />
-          <h3 
-            className="text-xl font-bold text-white mb-2"
-            style={{ fontFamily: 'Barlow Condensed, sans-serif' }}
-          >
-            NO LEAGUES YET
-          </h3>
-          <p className="text-[#94A3B8] mb-6">
-            Create a league to compete with friends or join an existing one
-          </p>
-          <div className="flex gap-3 justify-center">
-            <Button
-              onClick={() => setShowJoinModal(true)}
-              className="btn-secondary gap-2"
-            >
-              <UserPlus className="w-4 h-4" />
-              Join League
-            </Button>
-            <Button
-              onClick={() => setShowCreateModal(true)}
-              className="btn-primary gap-2"
-            >
-              <Plus className="w-4 h-4" />
-              Create League
-            </Button>
-          </div>
-        </div>
-      )}
-
-      {/* Create Group Modal */}
-      <Dialog open={showCreateModal} onOpenChange={setShowCreateModal}>
-        <DialogContent className="bg-[#151922] border-[#1E293B] text-white">
-          <DialogHeader>
-            <DialogTitle 
-              className="text-xl font-bold"
-              style={{ fontFamily: 'Barlow Condensed, sans-serif' }}
-            >
-              CREATE NEW LEAGUE
-            </DialogTitle>
-            <DialogDescription className="text-[#94A3B8]">
-              Create a private league and invite your friends
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="name" className="text-[#94A3B8]">League Name</Label>
-              <Input
-                id="name"
-                placeholder="e.g., Office Champions"
-                value={createName}
-                onChange={(e) => setCreateName(e.target.value)}
-                className="bg-[#0B0E14] border-[#334155] text-white"
-                data-testid="create-group-name"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description" className="text-[#94A3B8]">Description (optional)</Label>
-              <Input
-                id="description"
-                placeholder="e.g., Predictions for the 2026 World Cup"
-                value={createDescription}
-                onChange={(e) => setCreateDescription(e.target.value)}
-                className="bg-[#0B0E14] border-[#334155] text-white"
-                data-testid="create-group-description"
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => setShowCreateModal(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={createGroup}
-              disabled={submitting || !createName.trim()}
-              className="btn-primary"
-              data-testid="create-group-submit"
-            >
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Create League"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Join Group Modal */}
-      <Dialog open={showJoinModal} onOpenChange={setShowJoinModal}>
-        <DialogContent className="bg-[#151922] border-[#1E293B] text-white">
-          <DialogHeader>
-            <DialogTitle 
-              className="text-xl font-bold"
-              style={{ fontFamily: 'Barlow Condensed, sans-serif' }}
-            >
-              JOIN A LEAGUE
-            </DialogTitle>
-            <DialogDescription className="text-[#94A3B8]">
-              Enter the invite code to join a private league
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="code" className="text-[#94A3B8]">Invite Code</Label>
-              <Input
-                id="code"
-                placeholder="e.g., ABC12345"
-                value={joinCode}
-                onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                className="bg-[#0B0E14] border-[#334155] text-white font-mono tracking-wider text-center text-lg"
-                maxLength={8}
-                data-testid="join-group-code"
-              />
-            </div>
-          </div>
-
-          <DialogFooter>
-            <Button
-              variant="ghost"
-              onClick={() => setShowJoinModal(false)}
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={joinGroup}
-              disabled={submitting || !joinCode.trim()}
-              className="btn-primary"
-              data-testid="join-group-submit"
-            >
-              {submitting ? <Loader2 className="w-4 h-4 animate-spin" /> : "Join League"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Group Details Modal */}
-      <Dialog open={!!selectedGroup} onOpenChange={() => setSelectedGroup(null)}>
-        <DialogContent className="bg-[#151922] border-[#1E293B] text-white max-w-lg">
-          <DialogHeader>
-            <DialogTitle 
-              className="text-xl font-bold flex items-center gap-2"
-              style={{ fontFamily: 'Barlow Condensed, sans-serif' }}
-            >
-              {selectedGroup?.name}
-              {selectedGroup?.owner_id === user?.id && (
-                <Crown className="w-5 h-5 text-[#F59E0B]" />
               )}
-            </DialogTitle>
-            <DialogDescription className="text-[#94A3B8]">
-              {selectedGroup?.description || "No description"}
-            </DialogDescription>
-          </DialogHeader>
-
-          {selectedGroup && (
-            <div className="space-y-6 py-4">
-              {/* Invite Code */}
-              <div className="bg-[#0B0E14] rounded-xl p-4 flex items-center justify-between">
-                <div>
-                  <div className="text-xs text-[#94A3B8] mb-1">Invite Code</div>
-                  <div className="text-2xl font-mono font-bold text-[#00FF88]">
-                    {selectedGroup.code}
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  onClick={() => copyCode(selectedGroup.code)}
-                  className="text-[#94A3B8] hover:text-white"
-                >
-                  {copied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
-                </Button>
-              </div>
-
-              {/* Members */}
-              <div>
-                <h4 className="text-sm font-bold text-[#94A3B8] uppercase mb-3">
-                  Members ({selectedGroup.members_details?.length || 0})
-                </h4>
-                <div className="space-y-2">
-                  {selectedGroup.members_details?.map((member) => (
-                    <div 
-                      key={member.id}
-                      className="flex items-center gap-3 p-3 bg-[#0B0E14] rounded-lg"
-                    >
-                      <div className="w-10 h-10 rounded-full bg-[#1E293B] flex items-center justify-center">
-                        <span className="text-sm font-bold text-[#64748B]">
-                          {member.username?.substring(0, 2).toUpperCase()}
-                        </span>
-                      </div>
-                      <span className="text-sm font-medium text-white flex-1">
-                        {member.username}
-                        {member.id === user?.id && (
-                          <span className="ml-2 text-xs text-[#00FF88]">(You)</span>
-                        )}
-                      </span>
-                      {member.id === selectedGroup.owner_id && (
-                        <Crown className="w-4 h-4 text-[#F59E0B]" />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
+          ))
+        )}
+
+        {/* Create New Placeholder */}
+        {!loading && (
+          <div 
+            onClick={() => setCreateDialogOpen(true)}
+            className="border border-dashed border-white/10 rounded-2xl p-6 flex flex-col items-center justify-center text-center gap-4 hover:bg-white/5 transition-colors cursor-pointer group"
+          >
+            <div className="w-16 h-16 rounded-full bg-surface-raised flex items-center justify-center group-hover:scale-110 transition-transform">
+              <Plus className="w-8 h-8 text-muted-foreground" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-white font-heading">Create New League</h3>
+              <p className="text-sm text-muted-foreground">Start a new competition</p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };
