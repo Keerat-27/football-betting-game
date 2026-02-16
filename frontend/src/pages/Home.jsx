@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import { useAuth } from "../context/AuthContext";
@@ -11,15 +11,54 @@ import MatchCard from "../components/MatchCard";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+// Animated counter hook
+const useCountUp = (target, duration = 1200) => {
+  const [count, setCount] = useState(0);
+  const [started, setStarted] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) setStarted(true); },
+      { threshold: 0.3 }
+    );
+    if (ref.current) observer.observe(ref.current);
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!started || !target) return;
+    const num = parseInt(target) || 0;
+    const step = Math.ceil(num / (duration / 16));
+    let current = 0;
+    const timer = setInterval(() => {
+      current += step;
+      if (current >= num) { setCount(num); clearInterval(timer); }
+      else setCount(current);
+    }, 16);
+    return () => clearInterval(timer);
+  }, [started, target, duration]);
+
+  return { count, ref };
+};
+
 const Home = () => {
   const { user } = useAuth();
   const [upcomingMatches, setUpcomingMatches] = useState([]);
   const [leaderboard, setLeaderboard] = useState([]);
   const [userStats, setUserStats] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [heroVisible, setHeroVisible] = useState(false);
+
+  // Counter animations for stats
+  const pointsCounter = useCountUp(userStats?.total_points);
+  const rankCounter = useCountUp(userStats?.global_rank, 800);
+  const predictionsCounter = useCountUp(userStats?.predictions_count);
+  const accuracyCounter = useCountUp(userStats?.accuracy, 600);
 
   useEffect(() => {
     fetchData();
+    setTimeout(() => setHeroVisible(true), 100);
   }, []);
 
   const fetchData = async () => {
@@ -46,6 +85,8 @@ const Home = () => {
     return <Minus className="w-4 h-4 text-[#64748B]" />;
   };
 
+  const heroWords = "PREDICT. COMPETE. WIN.".split(" ");
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -68,7 +109,15 @@ const Home = () => {
             style={{ fontFamily: 'Barlow Condensed, sans-serif' }}
             data-testid="hero-title"
           >
-            PREDICT. COMPETE. WIN.
+            {heroWords.map((word, i) => (
+              <span
+                key={i}
+                className="hero-letter mr-3"
+                style={{ animationDelay: `${i * 0.15 + 0.2}s` }}
+              >
+                {word}
+              </span>
+            ))}
           </h1>
           
           <p className="text-lg md:text-xl text-[#94A3B8] mb-8 max-w-2xl mx-auto">
@@ -78,11 +127,11 @@ const Home = () => {
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/fixtures">
               <Button 
-                className="btn-primary h-14 px-8 text-lg rounded-xl"
+                className="btn-primary h-14 px-8 text-lg rounded-xl group"
                 data-testid="cta-make-predictions"
               >
                 Make Predictions
-                <ArrowRight className="w-5 h-5 ml-2" />
+                <ArrowRight className="w-5 h-5 ml-2 cta-arrow" />
               </Button>
             </Link>
             <Link to="/leaderboards">
@@ -102,20 +151,20 @@ const Home = () => {
         <section className="bg-[#151922] border-y border-[#1E293B]">
           <div className="max-w-7xl mx-auto px-4 py-6">
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              <div className="text-center">
-                <div className="text-3xl font-bold text-[#00FF88] font-score">{userStats.total_points}</div>
+              <div className="text-center" ref={pointsCounter.ref}>
+                <div className="text-3xl font-bold text-[#00FF88] font-score score-depth counter-animate">{pointsCounter.count}</div>
                 <div className="text-sm text-[#94A3B8] mt-1">Total Points</div>
               </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-white font-score">#{userStats.global_rank}</div>
+              <div className="text-center" ref={rankCounter.ref}>
+                <div className="text-3xl font-bold text-white font-score counter-animate">#{rankCounter.count}</div>
                 <div className="text-sm text-[#94A3B8] mt-1">Global Rank</div>
               </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-white font-score">{userStats.predictions_count}</div>
+              <div className="text-center" ref={predictionsCounter.ref}>
+                <div className="text-3xl font-bold text-white font-score counter-animate">{predictionsCounter.count}</div>
                 <div className="text-sm text-[#94A3B8] mt-1">Predictions</div>
               </div>
-              <div className="text-center">
-                <div className="text-3xl font-bold text-white font-score">{userStats.accuracy}%</div>
+              <div className="text-center" ref={accuracyCounter.ref}>
+                <div className="text-3xl font-bold text-white font-score counter-animate">{accuracyCounter.count}%</div>
                 <div className="text-sm text-[#94A3B8] mt-1">Accuracy</div>
               </div>
             </div>
@@ -144,11 +193,11 @@ const Home = () => {
             {loading ? (
               <div className="grid md:grid-cols-2 gap-4">
                 {[1, 2, 3, 4].map((i) => (
-                  <div key={i} className="stadium-card h-48 animate-pulse" />
+                  <div key={i} className="stadium-card h-48 skeleton-shimmer" />
                 ))}
               </div>
             ) : upcomingMatches.length > 0 ? (
-              <div className="grid md:grid-cols-2 gap-4">
+              <div className="grid md:grid-cols-2 gap-4 stagger-children">
                 {upcomingMatches.map((match) => (
                   <MatchCard key={match.id} match={match} />
                 ))}
@@ -180,11 +229,11 @@ const Home = () => {
               {loading ? (
                 <div className="space-y-4">
                   {[1, 2, 3, 4, 5].map((i) => (
-                    <div key={i} className="h-14 bg-[#1E293B] rounded-lg animate-pulse" />
+                    <div key={i} className="h-14 skeleton-shimmer" />
                   ))}
                 </div>
               ) : leaderboard.length > 0 ? (
-                <div className="space-y-2">
+                <div className="space-y-2 stagger-children">
                   {leaderboard.map((entry, idx) => (
                     <div
                       key={entry.user_id}
@@ -196,9 +245,9 @@ const Home = () => {
                       data-testid={`leaderboard-row-${idx + 1}`}
                     >
                       <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${
-                        idx === 0 ? "bg-[#F59E0B] text-black" :
-                        idx === 1 ? "bg-[#94A3B8] text-black" :
-                        idx === 2 ? "bg-[#CD7F32] text-black" :
+                        idx === 0 ? "medal-gold" :
+                        idx === 1 ? "medal-silver" :
+                        idx === 2 ? "medal-bronze" :
                         "bg-[#1E293B] text-[#94A3B8]"
                       }`}>
                         {entry.rank}
@@ -216,7 +265,7 @@ const Home = () => {
                       <div className="flex items-center gap-2">
                         {getMovementIcon(entry.movement)}
                         <div className="text-right">
-                          <div className="text-lg font-bold text-[#00FF88] font-score">
+                          <div className="text-lg font-bold text-[#00FF88] font-score score-depth">
                             {entry.total_points}
                           </div>
                           <div className="text-xs text-[#64748B]">pts</div>
@@ -235,17 +284,17 @@ const Home = () => {
 
             {/* Quick Links */}
             <div className="mt-6 grid grid-cols-2 gap-4">
-              <Link to="/groups-stage" className="stadium-card p-4 hover:border-[#3B82F6] transition-colors group">
+              <Link to="/groups-stage" className="stadium-card p-4 hover:border-[#3B82F6] transition-all duration-300 group">
                 <div className="text-[#3B82F6] mb-2">
-                  <Users className="w-6 h-6" />
+                  <Users className="w-6 h-6 icon-bounce" />
                 </div>
                 <div className="text-sm font-medium text-white group-hover:text-[#3B82F6] transition-colors">
                   Group Stage
                 </div>
               </Link>
-              <Link to="/knockout" className="stadium-card p-4 hover:border-[#D946EF] transition-colors group">
+              <Link to="/knockout" className="stadium-card p-4 hover:border-[#D946EF] transition-all duration-300 group">
                 <div className="text-[#D946EF] mb-2">
-                  <Trophy className="w-6 h-6" />
+                  <Trophy className="w-6 h-6 icon-bounce" />
                 </div>
                 <div className="text-sm font-medium text-white group-hover:text-[#D946EF] transition-colors">
                   Knockout Bracket

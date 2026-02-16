@@ -3,7 +3,7 @@ import axios from "axios";
 import { toast } from "sonner";
 import { Clock, Lock, Radio, Check, X, Zap } from "lucide-react";
 import { Button } from "./ui/button";
-import { format, parseISO, differenceInSeconds, differenceInMinutes } from "date-fns";
+import { format, parseISO, differenceInSeconds } from "date-fns";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -12,7 +12,10 @@ const MatchCard = ({ match, showPredictionInput = true, userPrediction = null, o
   const [awayScore, setAwayScore] = useState(userPrediction?.away_score ?? "");
   const [isJoker, setIsJoker] = useState(userPrediction?.is_joker ?? false);
   const [saving, setSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
   const [countdown, setCountdown] = useState("");
+  const [countdownSeconds, setCountdownSeconds] = useState(Infinity);
+  const [isTyping, setIsTyping] = useState(false);
 
   const matchDate = parseISO(match.utc_date);
   const lockTime = new Date(matchDate.getTime() - 15 * 60 * 1000);
@@ -36,8 +39,10 @@ const MatchCard = ({ match, showPredictionInput = true, userPrediction = null, o
       const diff = differenceInSeconds(lockTime, new Date());
       if (diff <= 0) {
         setCountdown("LOCKED");
+        setCountdownSeconds(0);
         clearInterval(timer);
       } else {
+        setCountdownSeconds(diff);
         const hours = Math.floor(diff / 3600);
         const minutes = Math.floor((diff % 3600) / 60);
         const seconds = diff % 60;
@@ -62,6 +67,8 @@ const MatchCard = ({ match, showPredictionInput = true, userPrediction = null, o
         away_score: parseInt(awayScore),
         is_joker: isJoker,
       });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 600);
       toast.success("Prediction saved!");
       if (onPredictionSaved) onPredictionSaved();
     } catch (error) {
@@ -70,6 +77,12 @@ const MatchCard = ({ match, showPredictionInput = true, userPrediction = null, o
     } finally {
       setSaving(false);
     }
+  };
+
+  const getCountdownClass = () => {
+    if (countdownSeconds > 3600) return "countdown-safe";
+    if (countdownSeconds > 900) return "countdown-warning";
+    return "countdown-urgent";
   };
 
   const getStatusBadge = () => {
@@ -90,15 +103,15 @@ const MatchCard = ({ match, showPredictionInput = true, userPrediction = null, o
     
     const points = userPrediction.points_earned || 0;
     if (points === 4) {
-      return <span className="bg-[#22C55E] text-white px-2 py-0.5 text-xs font-bold rounded flex items-center gap-1"><Check className="w-3 h-3" /> +4 Exact</span>;
+      return <span className="points-pop bg-[#22C55E] text-white px-2 py-0.5 text-xs font-bold rounded flex items-center gap-1"><Check className="w-3 h-3" /> +4 Exact</span>;
     }
     if (points === 3) {
-      return <span className="bg-[#3B82F6] text-white px-2 py-0.5 text-xs font-bold rounded flex items-center gap-1"><Check className="w-3 h-3" /> +3 Diff</span>;
+      return <span className="points-pop bg-[#3B82F6] text-white px-2 py-0.5 text-xs font-bold rounded flex items-center gap-1"><Check className="w-3 h-3" /> +3 Diff</span>;
     }
     if (points === 2) {
-      return <span className="bg-[#F59E0B] text-white px-2 py-0.5 text-xs font-bold rounded flex items-center gap-1"><Check className="w-3 h-3" /> +2 Tendency</span>;
+      return <span className="points-pop bg-[#F59E0B] text-white px-2 py-0.5 text-xs font-bold rounded flex items-center gap-1"><Check className="w-3 h-3" /> +2 Tendency</span>;
     }
-    return <span className="bg-[#EF4444] text-white px-2 py-0.5 text-xs font-bold rounded flex items-center gap-1"><X className="w-3 h-3" /> 0</span>;
+    return <span className="points-pop bg-[#EF4444] text-white px-2 py-0.5 text-xs font-bold rounded flex items-center gap-1"><X className="w-3 h-3" /> 0</span>;
   };
 
   return (
@@ -118,7 +131,7 @@ const MatchCard = ({ match, showPredictionInput = true, userPrediction = null, o
           {getPointsBadge()}
         </div>
         {!isLocked && !isFinished && countdown && (
-          <div className="text-xs text-[#F59E0B] font-mono flex items-center gap-1">
+          <div className={`text-xs font-mono flex items-center gap-1 ${getCountdownClass()}`}>
             <Clock className="w-3 h-3" />
             Locks in {countdown}
           </div>
@@ -129,9 +142,9 @@ const MatchCard = ({ match, showPredictionInput = true, userPrediction = null, o
       <div className="flex items-center justify-between gap-4">
         {/* Home Team */}
         <div className="flex-1 text-center">
-          <div className="w-12 h-12 mx-auto mb-2 rounded-lg bg-[#1E293B] flex items-center justify-center overflow-hidden">
+          <div className="w-12 h-12 mx-auto mb-2 rounded-lg bg-[#1E293B] flex items-center justify-center overflow-hidden transition-all duration-300 hover:scale-110 hover:shadow-[0_0_15px_rgba(0,255,136,0.2)]">
             {match.home_team.crest ? (
-              <img src={match.home_team.crest} alt={match.home_team.name} className="w-8 h-8 object-contain" />
+              <img src={match.home_team.crest} alt={match.home_team.name} className="w-8 h-8 object-contain drop-shadow-lg" />
             ) : (
               <span className="text-lg font-bold text-[#64748B]">{match.home_team.short_name?.substring(0, 2)}</span>
             )}
@@ -144,9 +157,9 @@ const MatchCard = ({ match, showPredictionInput = true, userPrediction = null, o
         <div className="flex flex-col items-center gap-2">
           {isFinished || isLive ? (
             <div className="flex items-center gap-3">
-              <span className="text-4xl font-bold text-white font-score">{match.score?.home ?? "-"}</span>
+              <span className="text-4xl font-bold text-white font-score score-depth">{match.score?.home ?? "-"}</span>
               <span className="text-2xl text-[#64748B]">:</span>
-              <span className="text-4xl font-bold text-white font-score">{match.score?.away ?? "-"}</span>
+              <span className="text-4xl font-bold text-white font-score score-depth">{match.score?.away ?? "-"}</span>
             </div>
           ) : showPredictionInput && !isLocked ? (
             <div className="flex items-center gap-2">
@@ -155,8 +168,8 @@ const MatchCard = ({ match, showPredictionInput = true, userPrediction = null, o
                 min="0"
                 max="20"
                 value={homeScore}
-                onChange={(e) => setHomeScore(e.target.value)}
-                className="input-score"
+                onChange={(e) => { setHomeScore(e.target.value); setIsTyping(true); setTimeout(() => setIsTyping(false), 300); }}
+                className={`input-score ${isTyping ? 'ring-1 ring-[#00FF88]/30' : ''}`}
                 placeholder="-"
                 data-testid={`home-score-input-${match.id}`}
               />
@@ -166,8 +179,8 @@ const MatchCard = ({ match, showPredictionInput = true, userPrediction = null, o
                 min="0"
                 max="20"
                 value={awayScore}
-                onChange={(e) => setAwayScore(e.target.value)}
-                className="input-score"
+                onChange={(e) => { setAwayScore(e.target.value); setIsTyping(true); setTimeout(() => setIsTyping(false), 300); }}
+                className={`input-score ${isTyping ? 'ring-1 ring-[#00FF88]/30' : ''}`}
                 placeholder="-"
                 data-testid={`away-score-input-${match.id}`}
               />
@@ -188,9 +201,9 @@ const MatchCard = ({ match, showPredictionInput = true, userPrediction = null, o
 
         {/* Away Team */}
         <div className="flex-1 text-center">
-          <div className="w-12 h-12 mx-auto mb-2 rounded-lg bg-[#1E293B] flex items-center justify-center overflow-hidden">
+          <div className="w-12 h-12 mx-auto mb-2 rounded-lg bg-[#1E293B] flex items-center justify-center overflow-hidden transition-all duration-300 hover:scale-110 hover:shadow-[0_0_15px_rgba(0,255,136,0.2)]">
             {match.away_team.crest ? (
-              <img src={match.away_team.crest} alt={match.away_team.name} className="w-8 h-8 object-contain" />
+              <img src={match.away_team.crest} alt={match.away_team.name} className="w-8 h-8 object-contain drop-shadow-lg" />
             ) : (
               <span className="text-lg font-bold text-[#64748B]">{match.away_team.short_name?.substring(0, 2)}</span>
             )}
@@ -205,24 +218,36 @@ const MatchCard = ({ match, showPredictionInput = true, userPrediction = null, o
         <div className="mt-4 pt-4 border-t border-[#1E293B] flex items-center justify-between">
           <button
             onClick={() => setIsJoker(!isJoker)}
-            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-300 ${
               isJoker
-                ? "bg-[#D946EF]/20 text-[#D946EF] border border-[#D946EF]"
-                : "bg-[#1E293B] text-[#94A3B8] hover:text-white"
+                ? "bg-[#D946EF]/20 text-[#D946EF] border border-[#D946EF] joker-active shadow-[0_0_15px_rgba(217,70,239,0.3)]"
+                : "bg-[#1E293B] text-[#94A3B8] hover:text-white hover:bg-[#1E293B]/80"
             }`}
             data-testid={`joker-toggle-${match.id}`}
           >
-            <Zap className="w-4 h-4" />
+            <Zap className={`w-4 h-4 transition-all duration-300 ${isJoker ? "scale-125 drop-shadow-[0_0_6px_rgba(217,70,239,0.8)]" : ""}`} />
             2x Joker
           </button>
           
           <Button
             onClick={savePrediction}
             disabled={saving || homeScore === "" || awayScore === ""}
-            className="btn-primary px-6 rounded-lg"
+            className={`btn-primary px-6 rounded-lg ${saveSuccess ? "save-success" : ""}`}
             data-testid={`save-prediction-${match.id}`}
           >
-            {saving ? "Saving..." : "Save"}
+            {saving ? (
+              <span className="flex items-center gap-2">
+                <span className="w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin" />
+                Saving
+              </span>
+            ) : saveSuccess ? (
+              <span className="flex items-center gap-2">
+                <Check className="w-4 h-4" />
+                Saved!
+              </span>
+            ) : (
+              "Save"
+            )}
           </Button>
         </div>
       )}

@@ -47,9 +47,9 @@ const Leaderboards = () => {
   };
 
   const getRankBadge = (rank) => {
-    if (rank === 1) return "bg-[#F59E0B] text-black";
-    if (rank === 2) return "bg-[#94A3B8] text-black";
-    if (rank === 3) return "bg-[#CD7F32] text-black";
+    if (rank === 1) return "medal-gold";
+    if (rank === 2) return "medal-silver";
+    if (rank === 3) return "medal-bronze";
     return "bg-[#1E293B] text-[#94A3B8]";
   };
 
@@ -76,17 +76,18 @@ const Leaderboards = () => {
             {data.map((entry) => (
               <tr 
                 key={entry.user_id}
-                className={`border-b border-[#1E293B] cursor-pointer transition-colors ${
+                className={`border-b border-[#1E293B] cursor-pointer transition-all duration-300 row-slide-in ${
                   entry.user_id === user?.id 
-                    ? "bg-[#00FF88]/10 hover:bg-[#00FF88]/20" 
+                    ? "bg-[#00FF88]/10 hover:bg-[#00FF88]/20 user-row-highlight" 
                     : "hover:bg-[#1E293B]/50"
                 }`}
+                style={{ animationDelay: `${data.indexOf(entry) * 0.05}s` }}
                 onClick={() => setSelectedUser(entry)}
                 data-testid={`leaderboard-row-${entry.rank}`}
               >
                 <td className="px-4 py-4">
                   <div className="flex items-center gap-2">
-                    <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${getRankBadge(entry.rank)}`}>
+                    <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold transition-transform hover:scale-110 ${getRankBadge(entry.rank)}`}>
                       {entry.rank}
                     </span>
                     {getMovementIcon(entry.movement)}
@@ -124,7 +125,7 @@ const Leaderboards = () => {
                   <span className="text-sm text-[#F59E0B] font-medium">{entry.tendencies || 0}</span>
                 </td>
                 <td className="px-4 py-4 text-right">
-                  <span className="text-xl font-bold text-[#00FF88] font-score">{entry.total_points}</span>
+                  <span className="text-xl font-bold text-[#00FF88] font-score score-depth counter-animate">{entry.total_points}</span>
                 </td>
               </tr>
             ))}
@@ -197,10 +198,10 @@ const Leaderboards = () => {
 
         <TabsContent value="global" className="mt-6">
           {loading ? (
-            <div className="stadium-card p-8 animate-pulse">
+            <div className="stadium-card p-8">
               <div className="space-y-4">
                 {[1, 2, 3, 4, 5].map((i) => (
-                  <div key={i} className="h-16 bg-[#1E293B] rounded-lg" />
+                  <div key={i} className="h-16 skeleton-shimmer" />
                 ))}
               </div>
             </div>
@@ -308,18 +309,18 @@ const GroupLeaderboard = ({ groupId, user, onUserClick }) => {
   };
 
   const getRankBadge = (rank) => {
-    if (rank === 1) return "bg-[#F59E0B] text-black";
-    if (rank === 2) return "bg-[#94A3B8] text-black";
-    if (rank === 3) return "bg-[#CD7F32] text-black";
+    if (rank === 1) return "medal-gold";
+    if (rank === 2) return "medal-silver";
+    if (rank === 3) return "medal-bronze";
     return "bg-[#1E293B] text-[#94A3B8]";
   };
 
   if (loading) {
     return (
-      <div className="stadium-card p-8 animate-pulse">
+      <div className="stadium-card p-8">
         <div className="space-y-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-16 bg-[#1E293B] rounded-lg" />
+            <div key={i} className="h-16 skeleton-shimmer" />
           ))}
         </div>
       </div>
@@ -342,15 +343,16 @@ const GroupLeaderboard = ({ groupId, user, onUserClick }) => {
             {leaderboard.map((entry) => (
               <tr 
                 key={entry.user_id}
-                className={`border-b border-[#1E293B] cursor-pointer transition-colors ${
+                className={`border-b border-[#1E293B] cursor-pointer transition-all duration-300 row-slide-in ${
                   entry.user_id === user?.id 
-                    ? "bg-[#00FF88]/10 hover:bg-[#00FF88]/20" 
+                    ? "bg-[#00FF88]/10 hover:bg-[#00FF88]/20 user-row-highlight" 
                     : "hover:bg-[#1E293B]/50"
                 }`}
+                style={{ animationDelay: `${leaderboard.indexOf(entry) * 0.05}s` }}
                 onClick={() => onUserClick(entry)}
               >
                 <td className="px-4 py-4">
-                  <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold ${getRankBadge(entry.rank)}`}>
+                  <span className={`w-8 h-8 rounded-lg flex items-center justify-center text-sm font-bold transition-transform hover:scale-110 ${getRankBadge(entry.rank)}`}>
                     {entry.rank}
                   </span>
                 </td>
@@ -364,7 +366,7 @@ const GroupLeaderboard = ({ groupId, user, onUserClick }) => {
                   <span className="text-sm text-[#94A3B8]">{entry.predictions_count}</span>
                 </td>
                 <td className="px-4 py-4 text-right">
-                  <span className="text-xl font-bold text-[#00FF88] font-score">{entry.total_points}</span>
+                  <span className="text-xl font-bold text-[#00FF88] font-score score-depth counter-animate">{entry.total_points}</span>
                 </td>
               </tr>
             ))}
